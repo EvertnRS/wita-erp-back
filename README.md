@@ -134,5 +134,9 @@ O principal objetivo do ERP Comercial é:
   <img width="100" height="100" alt="image" src="https://github.com/user-attachments/assets/0b34870c-3af6-44a2-bf6b-c256061965dc" />
 </a>
 
+<a href="https://github.com/ok-kioo">
+  <img width="100" height="100" alt="image" src="https://github.com/user-attachments/assets/f7da043e-005d-4c5c-a4ab-75fdec3ed861" />
+</a>
+
 ---
 
