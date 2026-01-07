@@ -114,15 +114,25 @@ O principal objetivo do ERP Comercial é:
 ## Tecnologias
 
 - Backend: Java + Spring Boot
-- Frontend: React ou HTML/CSS/JavaScript
-- Banco de Dados: PostgreSQL ou MySQL
-- Arquitetura: Camadas (Controller, Service, Repository)
+- Frontend: Angular
+- Banco de Dados: PostgreSQL
+- Arquitetura: DDD + Clean Arch
 
 ---
 
 ## Equipe
+<a href="https://github.com/EvertnRS">
+  <img width="100" height="100" alt="¨" al" src="https://github.com/user-attachments/assets/840eeb2e-2866-4a83-a86b-e97a498bde9f" />
+</a>
 
-Projeto desenvolvido em equipe como parte de um estudo prático de **Engenharia de Software**, com foco em análise de requisitos, modelagem e desenvolvimento de sistemas ERP.
+
+<a href="https://github.com/devictor8">
+  <img width="100" height="100" alt="image" src="https://github.com/user-attachments/assets/058be29c-5b3c-4bb4-9733-52955ac98b4f" />
+</a>
+
+<a href="https://github.com/CarlosWinicius">
+  <img width="100" height="100" alt="image" src="https://github.com/user-attachments/assets/0b34870c-3af6-44a2-bf6b-c256061965dc" />
+</a>
 
 ---
 
