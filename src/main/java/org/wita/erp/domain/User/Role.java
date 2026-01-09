@@ -1,4 +1,4 @@
-package org.wita.erp.domain;
+package org.wita.erp.domain.User;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.EqualsAndHashCode;
+
+import java.util.List;
 
 @Entity
 @Table(name = "role")
@@ -20,6 +22,8 @@ public class Role {
 
     @Column (unique = true, nullable = false)
     private String name;
+
+
 
     @PrePersist
     @PreUpdate
