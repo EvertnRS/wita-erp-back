@@ -9,8 +9,7 @@ import lombok.EqualsAndHashCode;
 
 @Entity
 @Table(name = "role")
-@Getter
-@Setter
+@Getter @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(of = "id")
@@ -21,6 +20,7 @@ public class Role {
 
     @Column (unique = true, nullable = false)
     private String name;
+
     @PrePersist
     @PreUpdate
     public void sanitize() {
