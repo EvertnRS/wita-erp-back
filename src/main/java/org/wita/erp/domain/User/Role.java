@@ -23,8 +23,6 @@ public class Role {
     @Column (unique = true, nullable = false)
     private String name;
 
-
-
     @PrePersist
     @PreUpdate
     public void sanitize() {
@@ -32,5 +30,4 @@ public class Role {
             this.name = this.name.trim().toUpperCase();
         }
     }
-
 }
