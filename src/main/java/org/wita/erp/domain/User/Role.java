@@ -21,13 +21,13 @@ public class Role {
     private long id;
 
     @Column (unique = true, nullable = false)
-    private String name;
+    private String role;
 
     @PrePersist
     @PreUpdate
     public void sanitize() {
-        if (this.name != null) {
-            this.name = this.name.trim().toUpperCase();
+        if (this.role != null) {
+            this.role = this.role.trim().toUpperCase();
         }
     }
 }

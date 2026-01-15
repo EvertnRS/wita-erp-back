@@ -1,4 +1,4 @@
 package org.wita.erp.domain.User;
 
-public enum LoginResponseDTO {
+public record LoginResponseDTO(UserDTO user, String token) {
 }
