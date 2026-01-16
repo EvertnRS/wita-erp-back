@@ -1,4 +1,6 @@
-package org.wita.erp.domain.User;
+package org.wita.erp.domain.User.Dtos;
+
+import org.wita.erp.domain.User.Role;
 
 import java.util.UUID;
 
