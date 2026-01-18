@@ -3,6 +3,7 @@ package org.wita.erp.controllers.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -39,8 +40,9 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register")
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     public ResponseEntity<UserDTO> register(@RequestBody @Valid RegisterDTO data) {
-        if(this.userRepository.findByEmail(data.email()) != null) return ResponseEntity.badRequest().build(); //já existe alguem com esse login
+        if(this.userRepository.findByEmail(data.email()).isPresent()) return ResponseEntity.badRequest().build(); //já existe alguem com esse login
 
         Optional<Role> role = this.roleRepository.findById(data.role());
 

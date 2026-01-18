@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.wita.erp.domain.User.Dtos.CreateRoleRequestDTO;
@@ -26,6 +27,7 @@ public class RoleController {
     private final PermissionRepository permissionRepository;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_READ')")
     public ResponseEntity<Page<Role>> getAllRoles(@PageableDefault(size = 10, sort = "role") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         Page<Role> rolePage;
 
@@ -39,6 +41,7 @@ public class RoleController {
     }
 
     @PostMapping("/create")
+    @PreAuthorize("hasAuthority('ROLE_CREATE')")
     public ResponseEntity<Role> create(@RequestBody CreateRoleRequestDTO data) {
         Set<Permission> permissions = new HashSet<>();
         data.permissions().forEach(permissionId -> {
@@ -56,6 +59,7 @@ public class RoleController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_UPDATE')")
     public ResponseEntity<Role> update(@PathVariable Long id, @RequestBody UpdateRoleRequestDTO data) {
         Role role = roleRepository.findById(id).orElse(null);
         if (role == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
@@ -79,6 +83,7 @@ public class RoleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_DELETE')")
     public ResponseEntity<Role> delete(@PathVariable Long id) {
         Role role = roleRepository.findById(id).orElse(null);
         if (role == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);

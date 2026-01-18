@@ -9,18 +9,17 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Table(name = "users")
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter @Setter
+@Getter
+@Setter
 public class User implements UserDetails {
-    @GeneratedValue(strategy = GenerationType.AUTO) @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Id
     private UUID id;
 
     @Column(nullable = false)
@@ -35,8 +34,8 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Boolean active = true;
 
-    @ManyToOne
-    @JoinColumn(name = "role_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
     public User(String name, String password, String email, Role role) {
@@ -48,8 +47,15 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if(this.role.getRole().equals("admin")) return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new  SimpleGrantedAuthority("ROLE_USER"));
-        else return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        if (this.role == null) return List.of();
+
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role.getRole()));
+
+        this.role.getPermissions().forEach(permission -> authorities.add(new SimpleGrantedAuthority(permission.getName())));
+
+        return authorities;
     }
 
     @Override
