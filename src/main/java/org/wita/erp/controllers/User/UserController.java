@@ -1,4 +1,4 @@
-package org.wita.erp.controllers;
+package org.wita.erp.controllers.User;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,6 @@ import org.wita.erp.domain.User.Mappers.UserMapper;
 import org.wita.erp.repositories.RoleRepository;
 import org.wita.erp.repositories.UserRepository;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -44,9 +43,6 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<UserDTO> update(@PathVariable UUID id, @RequestBody @Valid UpdateUserRequestDTO data) {
-        User loggedInUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (loggedInUser == null) return ResponseEntity.status(401).build();
-
         User user = userRepository.findById(id).orElse(null);
         if (user == null) return ResponseEntity.status(404).build();
 
@@ -70,9 +66,6 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<UserDTO> delete(@PathVariable UUID id) {
-        User loggedInUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (loggedInUser == null) return ResponseEntity.status(401).build();
-
         User user = userRepository.findById(id).orElse(null);
         if (user == null) return ResponseEntity.status(404).build();
         user.setActive(false);

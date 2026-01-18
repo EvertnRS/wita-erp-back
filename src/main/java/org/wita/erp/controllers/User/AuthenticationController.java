@@ -1,4 +1,4 @@
-package org.wita.erp.controllers;
+package org.wita.erp.controllers.User;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
