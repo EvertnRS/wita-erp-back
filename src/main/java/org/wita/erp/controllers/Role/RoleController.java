@@ -26,7 +26,7 @@ public class RoleController {
     private final PermissionRepository permissionRepository;
 
     @GetMapping
-    public ResponseEntity<Page<Role>> getAllUsers(@PageableDefault(size = 10, sort = "name") Pageable pageable, @RequestParam(required = false) String searchTerm) {
+    public ResponseEntity<Page<Role>> getAllRoles(@PageableDefault(size = 10, sort = "role") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         Page<Role> rolePage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -71,7 +71,9 @@ public class RoleController {
             role.setPermissions(permissions);
         }
 
-        if(data.name() != null) role.setRole(data.name());
+        if (data.name() != null) role.setRole(data.name());
+
+        roleRepository.save(role);
 
         return ResponseEntity.ok(role);
     }
@@ -79,7 +81,7 @@ public class RoleController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Role> delete(@PathVariable Long id) {
         Role role = roleRepository.findById(id).orElse(null);
-        if(role == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
+        if (role == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
         role.setActive(false);
         roleRepository.save(role);
         return ResponseEntity.ok(role);

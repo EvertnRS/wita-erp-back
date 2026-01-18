@@ -1,5 +1,5 @@
 INSERT INTO role (role)
-VALUES ('admin');
+VALUES ('ADMIN');
 
 INSERT INTO role_permission_relation (role_id, permission_id)
 VALUES (1, 2);

@@ -2,11 +2,13 @@ package org.wita.erp.domain.User.Dtos;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 public record RegisterDTO(
         @NotBlank @Email String email,
         @NotBlank String name,
         @NotBlank String password,
-        @NotBlank Long role
+        @NotNull @Positive Long role
 ) {
 }
