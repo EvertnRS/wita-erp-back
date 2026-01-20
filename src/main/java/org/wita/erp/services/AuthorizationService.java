@@ -11,6 +11,7 @@ import org.wita.erp.repositories.UserRepository;
 @RequiredArgsConstructor
 public class AuthorizationService implements UserDetailsService {
     private final UserRepository userRepository;
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByEmailWithPermissions(username);
