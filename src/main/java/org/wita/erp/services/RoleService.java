@@ -6,11 +6,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 import org.wita.erp.domain.User.Dtos.CreateRoleRequestDTO;
 import org.wita.erp.domain.User.Dtos.UpdateRoleRequestDTO;
 import org.wita.erp.domain.User.Permission;
 import org.wita.erp.domain.User.Role;
+import org.wita.erp.infra.exceptions.Permission.PermissionException;
+import org.wita.erp.infra.exceptions.Role.RoleException;
 import org.wita.erp.repositories.PermissionRepository;
 import org.wita.erp.repositories.RoleRepository;
 
@@ -38,8 +39,8 @@ public class RoleService {
     public ResponseEntity<Role> save(CreateRoleRequestDTO data) {
         Set<Permission> permissions = new HashSet<>();
         data.permissions().forEach(permissionId -> {
-            Permission permission = permissionRepository.findById(permissionId).orElse(null);
-            if (permission == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
+            Permission permission = permissionRepository.findById(permissionId)
+                    .orElseThrow(() -> new PermissionException("Permission " + permissionId + " not found", HttpStatus.NOT_FOUND));
             permissions.add(permission);
         });
 
@@ -52,15 +53,15 @@ public class RoleService {
     }
 
     public ResponseEntity<Role> update(Long id, UpdateRoleRequestDTO data) {
-        Role role = roleRepository.findById(id).orElse(null);
-        if (role == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
+        Role role = roleRepository.findById(id)
+                .orElseThrow(() -> new RoleException("Role not found", HttpStatus.NOT_FOUND));
 
         Set<Permission> permissions = role.getPermissions();
 
         if (data.permissions() != null) {
             data.permissions().forEach(permissionId -> {
-                Permission permission = permissionRepository.findById(permissionId).orElse(null);
-                if (permission == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
+                Permission permission = permissionRepository.findById(permissionId)
+                        .orElseThrow(() -> new PermissionException("Permission " + permissionId + " not found", HttpStatus.NOT_FOUND));
                 permissions.add(permission);
             });
             role.setPermissions(permissions);
@@ -74,8 +75,8 @@ public class RoleService {
     }
 
     public ResponseEntity<Role> delete(Long id) {
-        Role role = roleRepository.findById(id).orElse(null);
-        if (role == null) throw new HttpClientErrorException(HttpStatus.NOT_FOUND);
+        Role role = roleRepository.findById(id)
+                .orElseThrow(() -> new RoleException("Role not found", HttpStatus.NOT_FOUND));
         role.setActive(false);
         roleRepository.save(role);
         return ResponseEntity.ok(role);

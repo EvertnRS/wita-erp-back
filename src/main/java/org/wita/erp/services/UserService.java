@@ -3,6 +3,7 @@ package org.wita.erp.services;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -11,11 +12,11 @@ import org.wita.erp.domain.User.Dtos.*;
 import org.wita.erp.domain.User.Mappers.UserMapper;
 import org.wita.erp.domain.User.Role;
 import org.wita.erp.domain.User.User;
+import org.wita.erp.infra.exceptions.User.UserException;
 import org.wita.erp.infra.security.TokenService;
 import org.wita.erp.repositories.RoleRepository;
 import org.wita.erp.repositories.UserRepository;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -40,14 +41,15 @@ public class UserService {
     }
 
     public ResponseEntity<UserDTO> save(RegisterDTO data) {
-        if(this.userRepository.findByEmail(data.email()).isPresent()) return ResponseEntity.badRequest().build(); //já existe alguem com esse login
+        if(this.userRepository.findByEmail(data.email()).isPresent()) {
+            throw new UserException("Email already registered", HttpStatus.CONFLICT);
+        }
 
-        Optional<Role> role = this.roleRepository.findById(data.role());
-
-        if(role.isEmpty()) return ResponseEntity.badRequest().build();
+        Role role = this.roleRepository.findById(data.role())
+                .orElseThrow(() -> new UserException("Role not registered in the system", HttpStatus.NOT_FOUND));
 
         String encryptedPass = new BCryptPasswordEncoder().encode(data.password());
-        var newUser = new User(data.name(), encryptedPass, data.email(), role.get());
+        var newUser = new User(data.name(), encryptedPass, data.email(), role);
 
         this.userRepository.save(newUser);
 
@@ -55,11 +57,11 @@ public class UserService {
     }
 
     public ResponseEntity<UserDTO> update(UUID id, UpdateUserRequestDTO data) {
-        User user = userRepository.findById(id).orElse(null);
-        if (user == null) return ResponseEntity.status(404).build();
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
 
-        Optional<User> userWithEmail = userRepository.findByEmail(data.email());
-        if (userWithEmail.isPresent()) return ResponseEntity.status(409).build();
+        userRepository.findByEmail(data.email())
+                .orElseThrow(() -> new UserException("Email already registered", HttpStatus.CONFLICT));
 
         userMapper.updateUserFromDTO(data, user);
         if (data.password() != null && !data.password().isBlank()) {
@@ -77,8 +79,8 @@ public class UserService {
     }
 
     public ResponseEntity<UserDTO> delete(UUID id) {
-        User user = userRepository.findById(id).orElse(null);
-        if (user == null) return ResponseEntity.status(404).build();
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
         user.setActive(false);
         userRepository.save(user);
         return ResponseEntity.ok(userMapper.toUserDTO(user));
