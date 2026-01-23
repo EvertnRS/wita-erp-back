@@ -1,6 +1,8 @@
 package org.wita.erp.domain.Product;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -9,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "products")
+@Table(name = "product")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,17 +23,20 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    @Positive
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
+    @Min(0)
     @Column(name = "min_quantity", nullable = false)
     private Integer minQuantity;
 
+    @Min(0)
     @Column(name = "quantity_in_stock", nullable = false)
     private Integer quantityInStock;
 
     @ManyToOne
-    @JoinColumn(name = "categoty_id", nullable = false)
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
     @Column(nullable = false)

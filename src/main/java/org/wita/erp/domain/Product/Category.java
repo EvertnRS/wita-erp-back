@@ -9,7 +9,7 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Entity
-@Table(name = "categories")
+@Table(name = "category")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,6 +18,8 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.AUTO) @Id
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String name;
+
+    private Boolean active = true;
 }

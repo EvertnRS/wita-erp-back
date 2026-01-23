@@ -1,2 +1,2 @@
 ALTER TABLE permission
-ADD COLUMN description VARCHAR(255)
+    ADD COLUMN description VARCHAR(255)
