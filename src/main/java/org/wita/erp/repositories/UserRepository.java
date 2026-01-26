@@ -5,7 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.wita.erp.domain.User.User;
+import org.wita.erp.domain.user.User;
 
 import java.util.Optional;
 import java.util.UUID;

@@ -8,4 +8,4 @@ FROM role r
 WHERE r.role = 'ADMIN';
 
 INSERT INTO users (name, email, password, role_id)
-VALUES ('admin', 'admin@example.com', '$2a$10$QP5WNiYnOKetVVj2/Lgqsu7/MhOeE6ozsBB80c6qb9slHtnE9V30a', 1);
+VALUES ('admin', '${admin_email}', '${admin_password_hash}', 1);

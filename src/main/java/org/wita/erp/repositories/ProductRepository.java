@@ -1,12 +1,10 @@
 package org.wita.erp.repositories;
 
-import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.wita.erp.domain.Product.Product;
-import org.wita.erp.domain.User.Role;
+import org.wita.erp.domain.product.Product;
 
 import java.util.UUID;
 
