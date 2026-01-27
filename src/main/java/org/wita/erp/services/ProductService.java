@@ -6,26 +6,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.Product.Category;
-import org.wita.erp.domain.Product.Dtos.CreateProductRequestDTO;
-import org.wita.erp.domain.Product.Dtos.UpdateProductRequestDTO;
-import org.wita.erp.domain.Product.Mappers.ProductMapper;
-import org.wita.erp.domain.Product.Product;
-import org.wita.erp.domain.User.Dtos.CreateRoleRequestDTO;
-import org.wita.erp.domain.User.Dtos.UpdateRoleRequestDTO;
-import org.wita.erp.domain.User.Permission;
-import org.wita.erp.domain.User.Role;
-import org.wita.erp.infra.exceptions.Permission.PermissionException;
-import org.wita.erp.infra.exceptions.Product.CategoryException;
-import org.wita.erp.infra.exceptions.Product.ProductException;
-import org.wita.erp.infra.exceptions.Role.RoleException;
+import org.wita.erp.domain.product.Category;
+import org.wita.erp.domain.product.dtos.CreateProductRequestDTO;
+import org.wita.erp.domain.product.dtos.UpdateProductRequestDTO;
+import org.wita.erp.domain.product.mappers.ProductMapper;
+import org.wita.erp.domain.product.Product;
+import org.wita.erp.infra.exceptions.product.CategoryException;
+import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.repositories.CategoryRepository;
-import org.wita.erp.repositories.PermissionRepository;
 import org.wita.erp.repositories.ProductRepository;
-import org.wita.erp.repositories.RoleRepository;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Service

@@ -6,17 +6,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.Product.Category;
-import org.wita.erp.domain.Product.Dtos.CreateCategoryRequestDTO;
-import org.wita.erp.domain.Product.Dtos.CreateProductRequestDTO;
-import org.wita.erp.domain.Product.Dtos.UpdateCategoryRequestDTO;
-import org.wita.erp.domain.Product.Dtos.UpdateProductRequestDTO;
-import org.wita.erp.domain.Product.Mappers.ProductMapper;
-import org.wita.erp.domain.Product.Product;
-import org.wita.erp.infra.exceptions.Product.CategoryException;
-import org.wita.erp.infra.exceptions.Product.ProductException;
+import org.wita.erp.domain.product.Category;
+import org.wita.erp.domain.product.dtos.CreateCategoryRequestDTO;
+import org.wita.erp.domain.product.dtos.UpdateCategoryRequestDTO;
+import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.repositories.CategoryRepository;
-import org.wita.erp.repositories.ProductRepository;
 
 import java.util.UUID;
 

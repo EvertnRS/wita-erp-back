@@ -5,10 +5,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.User.Dtos.AuthenticationDTO;
-import org.wita.erp.domain.User.Dtos.LoginResponseDTO;
-import org.wita.erp.domain.User.Mappers.UserMapper;
-import org.wita.erp.domain.User.User;
+import org.wita.erp.domain.user.dtos.AuthenticationDTO;
+import org.wita.erp.domain.user.dtos.LoginResponseDTO;
+import org.wita.erp.domain.user.mappers.UserMapper;
+import org.wita.erp.domain.user.User;
 import org.wita.erp.infra.security.TokenService;
 
 @Service
