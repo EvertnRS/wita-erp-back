@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "purchases")
+@Table(name = "purchase")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,6 +30,10 @@ public class Purchase {
     @JoinColumn(name = "supplier_id", nullable = false)
     private Supplier supplier;
 
+    @ManyToOne
+    @JoinColumn(name = "payment_type_id", nullable = false)
+    private PaymentType paymentType;
+
     @Column(nullable = false)
     private Boolean active = true;
 
@@ -37,7 +41,4 @@ public class Purchase {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne
-    @JoinColumn(name = "payment_type_id", nullable = false)
-    private PaymentType paymentType;
 }

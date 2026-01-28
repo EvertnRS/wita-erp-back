@@ -3,6 +3,7 @@ package org.wita.erp.services.payment;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.payment.PaymentType;
@@ -10,6 +11,7 @@ import org.wita.erp.domain.entities.payment.dtos.CreatePaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.dtos.UpdatePaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.mappers.PaymentTypeMapper;
 import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
+import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 
 import java.util.UUID;
 
@@ -44,7 +46,7 @@ public class PaymentTypeService {
 
     public ResponseEntity<PaymentType> update(UUID id, UpdatePaymentTypeRequestDTO data) {
         PaymentType paymentType = paymentTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment type not found"));
+                .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
 
         paymentTypeMapper.updatePaymentTypeFromDTO(data, paymentType);
         paymentTypeRepository.save(paymentType);
@@ -54,7 +56,7 @@ public class PaymentTypeService {
 
     public ResponseEntity<PaymentType> delete(UUID id) {
         PaymentType paymentType = paymentTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment type not found"));
+                .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
 
         paymentType.setActive(false);
         paymentTypeRepository.save(paymentType);

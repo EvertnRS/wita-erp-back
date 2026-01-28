@@ -1,6 +1,7 @@
 package org.wita.erp.domain.entities.payment;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,7 +21,7 @@ public class PaymentType {
     @GeneratedValue(strategy = GenerationType.AUTO) @Id
     private UUID id;
 
-    @Column(name = "name")
+    @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "is_immediate", nullable = false)
@@ -29,6 +30,7 @@ public class PaymentType {
     @Column(name = "allows_installments", nullable = false)
     private Boolean allowsInstallments;
 
+    @Min(1)
     @Column(name = "max_installments", nullable = false)
     private Integer maxInstallments;
 

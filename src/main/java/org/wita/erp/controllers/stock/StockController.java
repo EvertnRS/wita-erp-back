@@ -24,8 +24,8 @@ public class StockController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('STOCK_READ')")
-    public ResponseEntity<Page<StockMovement>> getAllStock(@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return stockService.getAllStock(pageable);
+    public ResponseEntity<Page<StockMovement>> getAllStock(@PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable, @RequestParam(required = false) String searchTerm) {
+        return stockService.getAllStock(pageable, searchTerm);
     }
 
     @PostMapping("/create")
