@@ -5,12 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.user.dtos.AuthenticationDTO;
-import org.wita.erp.domain.user.dtos.LoginResponseDTO;
-import org.wita.erp.domain.user.dtos.RegisterDTO;
-import org.wita.erp.domain.user.dtos.UserDTO;
-import org.wita.erp.services.AuthenticationService;
-import org.wita.erp.services.UserService;
+import org.wita.erp.domain.entities.user.dtos.AuthenticationDTO;
+import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
+import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
+import org.wita.erp.domain.entities.user.dtos.UserDTO;
+import org.wita.erp.services.user.AuthenticationService;
+import org.wita.erp.services.user.UserService;
 
 @RestController
 @RequestMapping("auth")

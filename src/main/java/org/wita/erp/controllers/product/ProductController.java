@@ -8,10 +8,10 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.product.dtos.CreateProductRequestDTO;
-import org.wita.erp.domain.product.dtos.UpdateProductRequestDTO;
-import org.wita.erp.domain.product.Product;
-import org.wita.erp.services.ProductService;
+import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
+import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
+import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.services.product.ProductService;
 
 import java.util.UUID;
 
