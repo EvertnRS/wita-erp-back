@@ -7,9 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.customer.Customer;
-import org.wita.erp.domain.entities.customer.Dtos.CreateCustomerRequestDTO;
-import org.wita.erp.domain.entities.customer.Dtos.UpdateCustomerRequestDTO;
-import org.wita.erp.domain.entities.customer.Mapper.CustomerMapper;
+import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
+import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
+import org.wita.erp.domain.entities.customer.mappers.CustomerMapper;
 import org.wita.erp.infra.exceptions.customer.CustomerException;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
 

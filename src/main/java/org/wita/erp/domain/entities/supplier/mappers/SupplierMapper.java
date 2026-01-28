@@ -7,6 +7,6 @@ import org.wita.erp.domain.entities.supplier.dtos.UpdateSupplierRequestDTO;
 @Mapper(componentModel = "spring")
 public interface SupplierMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateSupplierFromSupplier(UpdateSupplierRequestDTO dto, @MappingTarget Supplier product);
+    void updateSupplierFromDTO(UpdateSupplierRequestDTO dto, @MappingTarget Supplier product);
 
 }

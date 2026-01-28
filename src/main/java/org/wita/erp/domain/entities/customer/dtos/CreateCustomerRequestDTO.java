@@ -1,4 +1,4 @@
-package org.wita.erp.domain.entities.customer.Dtos;
+package org.wita.erp.domain.entities.customer.dtos;
 
 import jakarta.validation.constraints.*;
 

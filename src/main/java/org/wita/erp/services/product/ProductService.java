@@ -67,7 +67,7 @@ public class ProductService {
             product.setCategory(category);
         }
 
-        productMapper.updateProductFromProduct(data, product);
+        productMapper.updateProductFromDTO(data, product);
         productRepository.save(product);
 
         return ResponseEntity.ok(product);

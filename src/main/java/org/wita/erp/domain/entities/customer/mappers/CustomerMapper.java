@@ -1,8 +1,8 @@
-package org.wita.erp.domain.entities.customer.Mapper;
+package org.wita.erp.domain.entities.customer.mappers;
 
 import org.mapstruct.*;
 import org.wita.erp.domain.entities.customer.Customer;
-import org.wita.erp.domain.entities.customer.Dtos.UpdateCustomerRequestDTO;
+import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 
 
 @Mapper(componentModel = "spring")

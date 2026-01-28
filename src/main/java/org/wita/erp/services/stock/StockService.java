@@ -85,7 +85,7 @@ public class StockService {
             stock.setUser(user);
         }
 
-        stockMapper.updateStockFromStock(data, stock);
+        stockMapper.updateStockFromDTO(data, stock);
         stockRepository.save(stock);
 
         return ResponseEntity.ok(stock);

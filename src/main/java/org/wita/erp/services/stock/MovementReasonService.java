@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.dtos.CreateMovementReasonRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateMovementReasonRequestDTO;
-import org.wita.erp.domain.entities.stock.mappers.MovementReasonMapper;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
@@ -20,7 +19,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MovementReasonService {
     private final MovementReasonRepository movementReasonRepository;
-    private final MovementReasonMapper movementReasonMapper;
 
     public ResponseEntity<Page<MovementReason>> getAllMovementReason(Pageable pageable, String searchTerm) {
         Page<MovementReason> movementReasonPage;
@@ -51,8 +49,9 @@ public class MovementReasonService {
         MovementReason movementReason = movementReasonRepository.findById(id)
                 .orElseThrow(() -> new MovementReasonException("MovementReason not found", HttpStatus.NOT_FOUND));
 
-        movementReasonMapper.updateMovementReasonFromMovementReason(data, movementReason);
-        movementReasonRepository.save(movementReason);
+        if(data.reason() != null) {
+            movementReason.setReason(data.reason());
+        }
 
         return ResponseEntity.ok(movementReason);
     }
