@@ -1,4 +1,9 @@
 package org.wita.erp.domain.entities.payment.dtos;
 
-public record CreatePaymentTypeRequestDTO(String name, Boolean isImmediate, Boolean allowsInstallments, Integer maxInstallments) {
+import jakarta.validation.constraints.NotNull;
+
+public record CreatePaymentTypeRequestDTO(@NotNull String name,
+                                          @NotNull Boolean isImmediate,
+                                          @NotNull Boolean allowsInstallments,
+                                          Integer maxInstallments) {
 }

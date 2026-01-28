@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.StockMovement;
@@ -17,7 +16,6 @@ import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
-import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.stock.StockException;
@@ -35,8 +33,14 @@ public class StockService {
     private final StockMapper stockMapper;
     private final UserRepository userRepository;
 
-    public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable) {
-        Page<StockMovement> stockPage = stockRepository.findAll(pageable);
+    public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable, String searchTerm) {
+        Page<StockMovement> stockPage;
+
+        if (searchTerm != null && !searchTerm.isBlank()) {
+            stockPage = stockRepository.findBySearchTerm(searchTerm, pageable);
+        } else {
+            stockPage = stockRepository.findAll(pageable);
+        }
 
         return ResponseEntity.ok(stockPage);
     }
