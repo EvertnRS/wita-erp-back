@@ -52,15 +52,19 @@ INSERT INTO permission (name, description) VALUES
 ('REPORT_EXPORT', 'Exportar relatórios'),
 
 -- Estoque
-
 ('STOCK_READ', 'Visualizar movimentação de estoque'),
 ('STOCK_CREATE', 'Ajustar movimentação de estoque'),
 ('STOCK_UPDATE', 'Atualizar movimentação de estoque'),
 ('STOCK_DELETE', 'Deletar movimentação de estoque'),
 
 -- Motivo da movimentação
-
 ('REASON_READ', 'Visualizar motivo da movimentação'),
 ('REASON_CREATE', 'Ajustar motivo da movimentação'),
 ('REASON_UPDATE', 'Atualizar motivo da movimentação'),
-('REASON_DELETE', 'Deletar motivo da movimentação');
+('REASON_DELETE', 'Deletar motivo da movimentação'),
+
+-- Tipo de pagamento
+('PAYMENT_READ', 'Visualizar tipo de pagamento'),
+('PAYMENT_CREATE', 'Criar tipo de pagamento'),
+('PAYMENT_UPDATE', 'Atualizar tipo de pagamento'),
+('PAYMENT_DELETE', 'Remover tipo de pagamento');

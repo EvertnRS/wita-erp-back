@@ -52,7 +52,7 @@ public class SupplierService {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new SupplierException("Supplier not found", HttpStatus.NOT_FOUND));
 
-        supplierMapper.updateSupplierFromSupplier(data, supplier);
+        supplierMapper.updateSupplierFromDTO(data, supplier);
         supplierRepository.save(supplier);
 
         return ResponseEntity.ok(supplier);

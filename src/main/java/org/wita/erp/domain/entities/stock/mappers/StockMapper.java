@@ -10,5 +10,5 @@ public interface StockMapper {
     @Mapping(target = "movementReason", ignore = true)
     @Mapping(target = "user", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateStockFromStock(UpdateStockRequestDTO dto, @MappingTarget StockMovement stock);
+    void updateStockFromDTO(UpdateStockRequestDTO dto, @MappingTarget StockMovement stock);
 }

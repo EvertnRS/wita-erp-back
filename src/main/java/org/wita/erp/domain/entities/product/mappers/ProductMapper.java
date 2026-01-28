@@ -8,6 +8,6 @@ import org.wita.erp.domain.entities.product.Product;
 public interface ProductMapper {
     @Mapping(target = "category", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateProductFromProduct(UpdateProductRequestDTO dto, @MappingTarget Product product);
+    void updateProductFromDTO(UpdateProductRequestDTO dto, @MappingTarget Product product);
 
 }

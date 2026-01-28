@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "payment_types")
+@Table(name = "payment_type")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,6 +20,7 @@ public class PaymentType {
     @GeneratedValue(strategy = GenerationType.AUTO) @Id
     private UUID id;
 
+    @Column(name = "name")
     private String name;
 
     @Column(name = "is_immediate", nullable = false)

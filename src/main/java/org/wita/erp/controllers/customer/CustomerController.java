@@ -1,4 +1,4 @@
-package org.wita.erp.controllers.Customer;
+package org.wita.erp.controllers.customer;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,8 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.customer.Customer;
-import org.wita.erp.domain.entities.customer.Dtos.CreateCustomerRequestDTO;
-import org.wita.erp.domain.entities.customer.Dtos.UpdateCustomerRequestDTO;
+import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
+import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 import org.wita.erp.services.customer.CustomerService;
 
 
