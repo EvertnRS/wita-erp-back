@@ -7,7 +7,7 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.user.User;
+import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.infra.exceptions.auth.AuthException;
 
 import java.time.Instant;
