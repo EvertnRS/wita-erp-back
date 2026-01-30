@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.payment.CompanyPaymentType;
+import org.wita.erp.domain.entities.payment.PaymentMethod;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.dtos.*;
 import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
@@ -33,13 +34,7 @@ public class CompanyPaymentTypeService {
     }
 
     public ResponseEntity<PaymentType> save(CreateCompanyPaymentTypeRequestDTO data) {
-        CompanyPaymentType companyPaymentType = new CompanyPaymentType();
-        companyPaymentType.setBankCode(data.bankCode());
-        companyPaymentType.setAgencyNumber(data.agencyNumber());
-        companyPaymentType.setAccountNumber(data.accountNumber());
-        companyPaymentType.setLastFourDigits(data.lastFourDigits());
-        companyPaymentType.setBrand(data.brand());
-        companyPaymentType.setClosingDay(data.closingDay());
+        CompanyPaymentType companyPaymentType = getCompanyPaymentType(data);
 
         ResponseEntity<PaymentType> response = paymentTypeService.save(companyPaymentType, new CreatePaymentTypeRequestDTO(
                 data.paymentMethod(),
@@ -49,6 +44,20 @@ public class CompanyPaymentTypeService {
         ));
 
         return ResponseEntity.ok(response.getBody());
+    }
+
+    private static CompanyPaymentType getCompanyPaymentType(CreateCompanyPaymentTypeRequestDTO data) {
+        CompanyPaymentType companyPaymentType = new CompanyPaymentType();
+        companyPaymentType.setBankCode(data.bankCode());
+        companyPaymentType.setAgencyNumber(data.agencyNumber());
+        companyPaymentType.setAccountNumber(data.accountNumber());
+
+        if(data.paymentMethod() == PaymentMethod.CREDIT_CARD){
+            companyPaymentType.setLastFourDigits(data.lastFourDigits());
+            companyPaymentType.setBrand(data.brand());
+            companyPaymentType.setClosingDay(data.closingDay());
+        }
+        return companyPaymentType;
     }
 
     public ResponseEntity<PaymentType> update(UUID id, UpdateCompanyPaymentTypeRequestDTO data) {

@@ -17,6 +17,7 @@ import org.wita.erp.domain.entities.purchase.dtos.UpdatePurchaseRequestDTO;
 import org.wita.erp.services.purchase.PayableService;
 import org.wita.erp.services.purchase.PurchaseService;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -33,7 +34,7 @@ public class PayableController {
 
     @PostMapping("/create")
     @PreAuthorize("hasAuthority('PAYABLE_CREATE')")
-    public ResponseEntity<Payable> create(@Valid @RequestBody CreatePayableRequestDTO data) {
+    public ResponseEntity<List<Payable>> create(@Valid @RequestBody CreatePayableRequestDTO data) {
         return payableService.save(data);
     }
 

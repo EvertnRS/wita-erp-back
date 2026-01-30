@@ -16,6 +16,7 @@ import org.wita.erp.domain.repositories.purchase.PurchaseRepository;
 import org.wita.erp.infra.exceptions.payable.PayableException;
 import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -38,18 +39,28 @@ public class PayableService {
         return ResponseEntity.ok(payablePage);
     }
 
-    public ResponseEntity<Payable> save(CreatePayableRequestDTO data){
+    public ResponseEntity<List<Payable>> save(CreatePayableRequestDTO data){
         Purchase purchase = purchaseRepository.findById(data.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not registered in the system", HttpStatus.NOT_FOUND));
 
-        Payable payable = new Payable();
-        payable.setPurchase(purchase);
-        payable.setPaymentStatus(data.paymentStatus());
-        payable.setDueDate(data.dueDate());
+        if (purchase.getPaymentType().getIsImmediate()){
+            throw new PayableException("Cannot create payable for immediate payment purchases", HttpStatus.BAD_REQUEST);
+        }
 
-        payableRepository.save(payable);
+        List<Payable> payables = new java.util.ArrayList<>(List.of());
 
-        return ResponseEntity.ok(payable);
+        for (int i = 1; i <= purchase.getPaymentType().getMaxInstallments(); i++) {
+            Payable payable = new Payable();
+            payable.setPurchase(purchase);
+            payable.setPaymentStatus(data.paymentStatus());
+            payable.setDueDate(data.dueDate().plusMonths(i));
+            payable.setInstallment(i);
+            payableRepository.save(payable);
+
+            payables.add(payable);
+        }
+
+        return ResponseEntity.ok(payables);
     }
 
     public ResponseEntity<Payable> update(UUID id, UpdatePayableRequestDTO data) {

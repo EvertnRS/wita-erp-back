@@ -32,6 +32,7 @@ public class Payable {
     private PaymentStatus paymentStatus;
 
     @Min(1)
+    @Column(nullable = false, updatable = false)
     private Integer installment;
 
     @ManyToOne

@@ -23,10 +23,21 @@ public class PaymentTypeService {
     private final PaymentTypeMapper paymentTypeMapper;
 
     public ResponseEntity<PaymentType> save(PaymentType paymentType, CreatePaymentTypeRequestDTO data) {
+        if (data.isImmediate()) {
+            paymentType.setIsImmediate(true);
+            paymentType.setAllowsInstallments(false);
+        } else {
+            paymentType.setIsImmediate(false);
+            paymentType.setAllowsInstallments(data.allowsInstallments());
+        }
+
+        if (!data.allowsInstallments()){
+            paymentType.setMaxInstallments(1);
+        } else{
+            paymentType.setMaxInstallments(data.maxInstallments());
+        }
+
         paymentType.setPaymentMethod(data.paymentMethod());
-        paymentType.setIsImmediate(data.isImmediate());
-        paymentType.setAllowsInstallments(data.allowsInstallments());
-        paymentType.setMaxInstallments(data.maxInstallments());
         paymentTypeRepository.save(paymentType);
 
         return ResponseEntity.ok(paymentType);

@@ -19,9 +19,17 @@ public record UpdateCompanyPaymentTypeRequestDTO(PaymentMethod paymentMethod,
         if (bankCode != null) entity.setBankCode(bankCode);
         if (agencyNumber != null) entity.setAgencyNumber(agencyNumber);
         if (accountNumber != null) entity.setAccountNumber(accountNumber);
-        if (lastFourDigits != null) entity.setLastFourDigits(lastFourDigits);
-        if (brand != null) entity.setBrand(brand);
-        if (closingDay != null) entity.setClosingDay(closingDay);
+
+        if (entity.getPaymentMethod() == PaymentMethod.CREDIT_CARD){
+            if (lastFourDigits != null) entity.setLastFourDigits(lastFourDigits);
+            if (brand != null) entity.setBrand(brand);
+            if (closingDay != null) entity.setClosingDay(closingDay);
+
+        } else{
+            entity.setLastFourDigits(null);
+            entity.setBrand(null);
+            entity.setClosingDay(null);
+        }
     }
 
 }

@@ -1,6 +1,8 @@
 package org.wita.erp.domain.entities.payment;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,6 +32,8 @@ public class CompanyPaymentType extends PaymentType {
     @Column(name = "brand")
     private String brand;
 
-    @Column(name = "closing day")
+   @Min(1)
+   @Max(30)
+    @Column(name = "closing_day")
     private Integer closingDay;
 }

@@ -11,7 +11,7 @@ public record CreateCompanyPaymentTypeRequestDTO(@NotNull PaymentMethod paymentM
                                                  @NotNull String bankCode,
                                                  @NotNull String agencyNumber,
                                                  @NotNull String accountNumber,
-                                                 @NotNull String lastFourDigits,
-                                                 @NotNull String brand,
-                                                 @NotNull Integer closingDay) {
+                                                 String lastFourDigits,
+                                                 String brand,
+                                                 Integer closingDay) {
 }

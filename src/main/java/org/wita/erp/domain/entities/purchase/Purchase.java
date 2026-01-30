@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.wita.erp.domain.entities.payment.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.supplier.Supplier;
 
