@@ -42,16 +42,25 @@ public class PurchaseService {
     }
 
     public ResponseEntity<Purchase> save(CreatePurchaseRequestDTO data){
+        if (purchaseRepository.findByTransactionCode(data.transactionCode()) != null) {
+            throw new PurchaseException("Transaction code already exists", HttpStatus.BAD_REQUEST);
+
+        }
+
         Supplier supplier = supplierRepository.findById(data.supplier())
                 .orElseThrow(() -> new SupplierException("Supplier not registered in the system", HttpStatus.NOT_FOUND));
 
         PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
 
+
         Purchase purchase = new Purchase();
         purchase.setValue(data.value());
         purchase.setSupplier(supplier);
         purchase.setPaymentType(paymentType);
+        purchase.setDescription(data.description());
+        purchase.setTransactionCode(data.transactionCode());
+
         purchaseRepository.save(purchase);
 
         return ResponseEntity.ok(purchase);

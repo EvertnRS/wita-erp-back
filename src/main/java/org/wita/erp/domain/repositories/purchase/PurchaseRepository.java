@@ -12,4 +12,6 @@ public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
     @Query("SELECT p FROM Purchase p WHERE " +
             "(LOWER(p.supplier.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     Page<Purchase> findBySearchTerm(String searchTerm, Pageable pageable);
+
+    Purchase findByTransactionCode(String transactionCode);
 }

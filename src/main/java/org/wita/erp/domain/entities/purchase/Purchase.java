@@ -34,6 +34,11 @@ public class Purchase {
     @JoinColumn(name = "payment_type_id", nullable = false)
     private PaymentType paymentType;
 
+    @Column(name = "transaction_code", nullable = false, unique = true)
+    private String transactionCode;
+
+    private String description;
+
     @Column(nullable = false)
     private Boolean active = true;
 

@@ -24,7 +24,7 @@ public class PurchaseController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('PURCHASE_READ')")
-    public ResponseEntity<Page<Purchase>> getAllPurchases(@PageableDefault(size = 10, sort = "value") Pageable pageable, @RequestParam(required = false) String searchTerm) {
+    public ResponseEntity<Page<Purchase>> getAllPurchases(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return purchaseService.getAllPurchases(pageable, searchTerm);
     }
 
