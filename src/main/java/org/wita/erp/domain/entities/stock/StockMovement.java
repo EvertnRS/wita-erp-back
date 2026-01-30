@@ -1,6 +1,7 @@
 package org.wita.erp.domain.entities.stock;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.wita.erp.domain.entities.product.Product;
@@ -26,6 +27,7 @@ public class StockMovement {
     @Column(name = "movement_type", nullable = false)
     private StockMovementType stockMovementType;
 
+    @Min(0)
     @Column(nullable = false)
     private Integer quantity;
 

@@ -7,5 +7,7 @@ import java.util.UUID;
 
 public record CreatePurchaseRequestDTO(@NotNull BigDecimal value,
                                        @NotNull UUID supplier,
-                                       @NotNull UUID paymentType) {
+                                       @NotNull UUID paymentType,
+                                       @NotNull String transactionCode,
+                                       String description) {
 }

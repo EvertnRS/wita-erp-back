@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.wita.erp.domain.entities.payment.PaymentMethod;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.dtos.CreatePaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.dtos.UpdatePaymentTypeRequestDTO;
@@ -21,32 +22,28 @@ public class PaymentTypeService {
     private final PaymentTypeRepository paymentTypeRepository;
     private final PaymentTypeMapper paymentTypeMapper;
 
-    public ResponseEntity<Page<PaymentType>> getAllPaymentTypes(Pageable pageable, String searchTerm) {
-        Page<PaymentType> paymentTypePage;
-
-        if (searchTerm != null && !searchTerm.isBlank()) {
-            paymentTypePage = paymentTypeRepository.findBySearchTerm(searchTerm, pageable);
+    public ResponseEntity<PaymentType> save(PaymentType paymentType, CreatePaymentTypeRequestDTO data) {
+        if (data.isImmediate()) {
+            paymentType.setIsImmediate(true);
+            paymentType.setAllowsInstallments(false);
         } else {
-            paymentTypePage = paymentTypeRepository.findAll(pageable);
+            paymentType.setIsImmediate(false);
+            paymentType.setAllowsInstallments(data.allowsInstallments());
         }
 
-        return ResponseEntity.ok(paymentTypePage);
-    }
+        if (!data.allowsInstallments()){
+            paymentType.setMaxInstallments(1);
+        } else{
+            paymentType.setMaxInstallments(data.maxInstallments());
+        }
 
-    public ResponseEntity<PaymentType> save(CreatePaymentTypeRequestDTO data) {
-        PaymentType paymentType = new PaymentType();
-        paymentType.setName(data.name());
-        paymentType.setIsImmediate(data.isImmediate());
-        paymentType.setAllowsInstallments(data.allowsInstallments());
-        paymentType.setMaxInstallments(data.maxInstallments());
+        paymentType.setPaymentMethod(data.paymentMethod());
         paymentTypeRepository.save(paymentType);
 
         return ResponseEntity.ok(paymentType);
     }
 
-    public ResponseEntity<PaymentType> update(UUID id, UpdatePaymentTypeRequestDTO data) {
-        PaymentType paymentType = paymentTypeRepository.findById(id)
-                .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
+    public ResponseEntity<PaymentType> update(PaymentType paymentType, UpdatePaymentTypeRequestDTO data) {
 
         paymentTypeMapper.updatePaymentTypeFromDTO(data, paymentType);
         paymentTypeRepository.save(paymentType);

@@ -63,8 +63,26 @@ INSERT INTO permission (name, description) VALUES
 ('REASON_UPDATE', 'Atualizar motivo da movimentação'),
 ('REASON_DELETE', 'Deletar motivo da movimentação'),
 
--- Tipo de pagamento
-('PAYMENT_READ', 'Visualizar tipo de pagamento'),
-('PAYMENT_CREATE', 'Criar tipo de pagamento'),
-('PAYMENT_UPDATE', 'Atualizar tipo de pagamento'),
-('PAYMENT_DELETE', 'Remover tipo de pagamento');
+-- Tipo de pagamento do cliente
+('CUSTOMER_PAYMENT_READ', 'Visualizar tipo de pagamento'),
+('CUSTOMER_PAYMENT_CREATE', 'Criar tipo de pagamento'),
+('CUSTOMER_PAYMENT_UPDATE', 'Atualizar tipo de pagamento'),
+('CUSTOMER_PAYMENT_DELETE', 'Remover tipo de pagamento'),
+
+-- Tipo de pagamento da empresa
+('COMPANY_PAYMENT_READ', 'Visualizar tipo de pagamento'),
+('COMPANY_PAYMENT_CREATE', 'Criar tipo de pagamento'),
+('COMPANY_PAYMENT_UPDATE', 'Atualizar tipo de pagamento'),
+('COMPANY_PAYMENT_DELETE', 'Remover tipo de pagamento'),
+
+-- Contas a pagar
+('PAYABLE_READ', 'Visualizar contas a pagar'),
+('PAYABLE_CREATE', 'Criar contas a pagar'),
+('PAYABLE_UPDATE', 'Atualizar contas a pagar'),
+('PAYABLE_DELETE', 'Remover contas a pagar'),
+
+-- Contas a receber
+('RECEIVABLE_READ', 'Visualizar contas a pagar'),
+('RECEIVABLE_CREATE', 'Criar contas a pagar'),
+('RECEIVABLE_UPDATE', 'Atualizar contas a pagar'),
+('RECEIVABLE_DELETE', 'Remover contas a pagar');

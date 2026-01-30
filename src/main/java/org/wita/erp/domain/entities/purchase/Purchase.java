@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.wita.erp.domain.entities.payment.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.supplier.Supplier;
 
@@ -33,6 +34,11 @@ public class Purchase {
     @ManyToOne
     @JoinColumn(name = "payment_type_id", nullable = false)
     private PaymentType paymentType;
+
+    @Column(name = "transaction_code", nullable = false, unique = true)
+    private String transactionCode;
+
+    private String description;
 
     @Column(nullable = false)
     private Boolean active = true;

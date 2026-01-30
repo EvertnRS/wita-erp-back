@@ -1,9 +1,10 @@
 package org.wita.erp.domain.entities.payment.dtos;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import org.wita.erp.domain.entities.payment.PaymentMethod;
 
-public record UpdatePaymentTypeRequestDTO(@NotNull String name,
-                                          @NotNull Boolean isImmediate,
-                                          @NotNull Boolean allowsInstallments,
-                                          Integer maxInstallments) {
+public record UpdatePaymentTypeRequestDTO(PaymentMethod paymentMethod,
+                                          Boolean isImmediate,
+                                          Boolean allowsInstallments,
+                                          @Positive Integer maxInstallments) {
 }
