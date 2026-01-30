@@ -9,13 +9,13 @@ import org.wita.erp.domain.entities.user.dtos.AuthenticationDTO;
 import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
 import org.wita.erp.domain.entities.user.User;
-import org.wita.erp.infra.security.TokenService;
+import org.wita.erp.infra.providers.auth.AuthProvider;
 
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
-    private final TokenService tokenService;
+    private final AuthProvider authProvider;
     private final UserMapper userMapper;
 
     public ResponseEntity<LoginResponseDTO> login(AuthenticationDTO data) {
@@ -23,7 +23,7 @@ public class AuthenticationService {
         var auth = this.authenticationManager.authenticate(userNamePassword);
 
         var user =  (User) auth.getPrincipal();
-        var token = tokenService.generateToken(user);
+        var token = authProvider.generateToken(user);
 
         return ResponseEntity.ok(new LoginResponseDTO(userMapper.toUserDTO(user), token));
     }

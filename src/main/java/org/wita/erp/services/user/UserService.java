@@ -5,7 +5,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
@@ -15,7 +14,6 @@ import org.wita.erp.domain.entities.user.mappers.UserMapper;
 import org.wita.erp.domain.entities.user.Role;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.infra.exceptions.user.UserException;
-import org.wita.erp.infra.security.TokenService;
 import org.wita.erp.domain.repositories.user.RoleRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 
@@ -27,8 +25,6 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
-    private final AuthenticationManager authenticationManager;
-    private final TokenService tokenService;
 
     public ResponseEntity<Page<UserDTO>> getAllUsers(Pageable pageable, String searchTerm) {
         Page<User> userPage;
