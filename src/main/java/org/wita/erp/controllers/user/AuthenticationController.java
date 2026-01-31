@@ -1,14 +1,12 @@
 package org.wita.erp.controllers.user;
 
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.user.dtos.AuthenticationDTO;
-import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
-import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
-import org.wita.erp.domain.entities.user.dtos.UserDTO;
+import org.wita.erp.domain.entities.user.dtos.*;
 import org.wita.erp.services.user.AuthenticationService;
 import org.wita.erp.services.user.UserService;
 
@@ -22,6 +20,16 @@ public class AuthenticationController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid AuthenticationDTO data) {
         return authenticationService.login(data);
+    }
+
+    @PostMapping("/recovery")
+    public ResponseEntity<String> requestRecovery(@RequestBody @Valid RequestRecoveryDTO data, @RequestHeader(value = "User-Agent", required = false) String userAgent) throws MessagingException {
+        return authenticationService.requestRecovery(data, userAgent);
+    }
+
+    @PostMapping("/reset")
+    public ResponseEntity<String> resetPassword(@RequestBody @Valid RequestResetDTO data, @RequestParam("token") String token){
+        return authenticationService.resetPassword(data, token);
     }
 
     @PostMapping("/register")

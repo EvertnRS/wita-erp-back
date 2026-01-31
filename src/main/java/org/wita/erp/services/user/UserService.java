@@ -5,7 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
 import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
@@ -17,6 +17,9 @@ import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.domain.repositories.user.RoleRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -25,6 +28,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public ResponseEntity<Page<UserDTO>> getAllUsers(Pageable pageable, String searchTerm) {
         Page<User> userPage;
@@ -46,7 +50,7 @@ public class UserService {
         Role role = this.roleRepository.findById(data.role())
                 .orElseThrow(() -> new UserException("Role not registered in the system", HttpStatus.NOT_FOUND));
 
-        String encryptedPass = new BCryptPasswordEncoder().encode(data.password());
+        String encryptedPass = passwordEncoder.encode(data.password());
         var newUser = new User(data.name(), encryptedPass, data.email(), role);
 
         this.userRepository.save(newUser);
@@ -58,12 +62,14 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
 
-        userRepository.findByEmail(data.email())
-                .orElseThrow(() -> new UserException("Email already registered", HttpStatus.CONFLICT));
+        Optional<User> existingUser = userRepository.findByEmail(data.email());
+        if (existingUser.isPresent()) {
+            throw new UserException("Email already registered", HttpStatus.CONFLICT);
+        }
 
         userMapper.updateUserFromDTO(data, user);
         if (data.password() != null && !data.password().isBlank()) {
-            String encryptedPass = new BCryptPasswordEncoder().encode(data.password());
+            String encryptedPass = passwordEncoder.encode(data.password());
             user.setPassword(encryptedPass);
         }
         if (data.role() != null) {
@@ -82,5 +88,18 @@ public class UserService {
         user.setActive(false);
         userRepository.save(user);
         return ResponseEntity.ok(userMapper.toUserDTO(user));
+    }
+
+    public void saveResetToken(User user, String token, LocalDateTime expiresAt) {
+        user.setResetToken(token);
+        user.setResetTokenExpiresAt(expiresAt);
+        userRepository.save(user);
+    }
+
+    public void updateResetToken(User user, String newPassword) {
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiresAt(null);
+        userRepository.save(user);
     }
 }
