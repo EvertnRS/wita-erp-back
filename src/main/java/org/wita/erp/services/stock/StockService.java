@@ -1,5 +1,6 @@
 package org.wita.erp.services.stock;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.StockMovement;
+import org.wita.erp.domain.entities.stock.StockMovementType;
 import org.wita.erp.domain.entities.stock.dtos.CreateStockRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateStockRequestDTO;
 import org.wita.erp.domain.entities.stock.mappers.StockMapper;
@@ -21,6 +23,7 @@ import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.stock.StockException;
 import org.wita.erp.domain.repositories.stock.StockRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
+import org.wita.erp.services.product.ProductService;
 
 import java.util.UUID;
 
@@ -32,6 +35,7 @@ public class StockService {
     private final MovementReasonRepository movementReasonRepository;
     private final StockMapper stockMapper;
     private final UserRepository userRepository;
+    private final ProductService productService;
 
     public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable, String searchTerm) {
         Page<StockMovement> stockPage;
@@ -45,6 +49,7 @@ public class StockService {
         return ResponseEntity.ok(stockPage);
     }
 
+    @Transactional
     public ResponseEntity<StockMovement> save(CreateStockRequestDTO data) {
         Product product = productRepository.findById(data.product())
                 .orElseThrow(() -> new ProductException("Product not registered in the system", HttpStatus.NOT_FOUND));
@@ -54,6 +59,12 @@ public class StockService {
 
         User user = userRepository.findById(data.user())
                 .orElseThrow(() -> new UserException("User not registered in the system", HttpStatus.NOT_FOUND));
+
+        if(data.stockMovementType() == StockMovementType.IN) {
+            productService.addProductInStock(data.product(), data.quantity());
+        } else if (data.stockMovementType() == StockMovementType.OUT) {
+            productService.removeProductFromStock(data.product(), data.quantity());
+        }
 
         StockMovement stock = new StockMovement();
         stock.setProduct(product);
