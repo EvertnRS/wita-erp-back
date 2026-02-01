@@ -1,4 +1,4 @@
-package org.wita.erp.infra.security;
+package org.wita.erp.infra.providers.auth;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 @Service
-public class TokenService {
+public class JWTProvider implements AuthProvider {
     @Value("${api.security.token.secret}")
     private String secret;
 
