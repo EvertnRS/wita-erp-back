@@ -80,4 +80,22 @@ public class ProductService {
         productRepository.save(product);
         return ResponseEntity.ok(product);
     }
+
+    public ResponseEntity<Product> addProductInStock(UUID id, Integer quantity) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
+
+        product.setQuantityInStock(product.getQuantityInStock() + quantity);
+        productRepository.save(product);
+        return ResponseEntity.ok(product);
+    }
+
+    public ResponseEntity<Product> removeProductFromStock(UUID id, Integer quantity) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
+
+        product.setQuantityInStock(product.getQuantityInStock() - quantity);
+        productRepository.save(product);
+        return ResponseEntity.ok(product);
+    }
 }
