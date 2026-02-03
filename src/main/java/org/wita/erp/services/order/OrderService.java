@@ -2,11 +2,14 @@ package org.wita.erp.services.order;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.order.OrderItem;
 import org.wita.erp.domain.entities.order.dtos.CreateOrderRequestDTO;
@@ -32,6 +35,7 @@ import org.wita.erp.infra.exceptions.customer.CustomerException;
 import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
+import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.stock.StockService;
 
@@ -47,7 +51,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final PaymentTypeRepository paymentTypeRepository;
     private final ProductRepository productRepository;
-    private final StockService stockService;
+    private final ApplicationEventPublisher publisher;
     private final MovementReasonRepository movementReasonRepository;
 
     public ResponseEntity<Page<OrderDTO>> getAllOrders(Pageable pageable, String searchTerm) {
@@ -62,15 +66,10 @@ public class OrderService {
         return ResponseEntity.ok(purchasePage.map(orderMapper::toDTO));
     }
 
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public ResponseEntity<OrderDTO> save(CreateOrderRequestDTO data) {
         if (orderRepository.findByTransactionCode(data.transactionCode()) != null) {
             throw new OrderException("Transaction code already exists", HttpStatus.BAD_REQUEST);
-        }
-
-        long uniqueIds = data.products().stream().map(ProductOrderRequestDTO::product).distinct().count();
-        if (uniqueIds != data.products().size()) {
-            throw new OrderException("Duplicate products found. Combine quantities.", HttpStatus.BAD_REQUEST);
         }
 
         Customer customer = customerRepository.findById(data.customer())
@@ -85,26 +84,33 @@ public class OrderService {
             throw new OrderException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
         }
 
+        MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+        long uniqueIds = data.products().stream().map(ProductOrderRequestDTO::product).distinct().count();
+        if (uniqueIds != data.products().size()) {
+            throw new OrderException("Duplicate products found. Combine quantities.", HttpStatus.BAD_REQUEST);
+        }
+
         Order order = new Order();
         order.setCustomer(customer);
         order.setSeller(seller);
         order.setTransactionCode(data.transactionCode());
         order.setPaymentType(paymentType);
 
-        MovementReason reason = findSaleReason();
-
         for (ProductOrderRequestDTO itemData : data.products()) {
             Product product = productRepository.findById(itemData.product())
                     .orElseThrow(() -> new ProductException("Product " + itemData.product() + " not found", HttpStatus.NOT_FOUND));
-
-            handleStockMovement(product, itemData.quantity(), reason, seller.getId());
 
             OrderItem orderItem = createOrderItem(product, itemData.quantity());
             order.addItem(orderItem);
         }
 
         applyDiscountAndCalculateTotal(order, data.discount());
+
         orderRepository.save(order);
+
+        publisher.publishEvent(new CreateOrderObserver(order.getId(), movementReason.getId()));
 
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
@@ -140,14 +146,14 @@ public class OrderService {
             order.setTransactionCode(data.transactionCode());
         }
 
-        if (data.products() != null) {
+        /*if (data.products() != null) {
             MovementReason reason = findSaleReason();
             UUID sellerId = data.seller() != null ? data.seller() : order.getSeller().getId();
 
             for (ProductOrderRequestDTO itemData : data.products()) {
                 updateOrderItem(order, itemData, reason, sellerId);
             }
-        }
+        }*/
 
         BigDecimal discount = data.discount() != null ? data.discount() : (order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO);
         applyDiscountAndCalculateTotal(order, discount);
@@ -162,9 +168,9 @@ public class OrderService {
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
         Product product = productRepository.findById(data.product())
                 .orElseThrow(() -> new ProductException("Product " + data.product() + " not found", HttpStatus.NOT_FOUND));
-        MovementReason reason = findSaleReason();
+        /*MovementReason reason = findSaleReason();*/
 
-        handleStockMovement(product, data.quantity(), reason, order.getSeller().getId());
+        /*handleStockMovement(product, data.quantity(), reason, order.getSeller().getId());*/
 
         OrderItem orderItem = createOrderItem(product, data.quantity());
         order.addItem(orderItem);
@@ -193,13 +199,13 @@ public class OrderService {
             throw new ProductException("Product " + product.getName() + " quantity less than stock", HttpStatus.BAD_REQUEST);
         }
 
-        stockService.save(new CreateStockRequestDTO(
+        /*stockService.save(new CreateStockRequestDTO(
                 product.getId(),
                 type,
                 Math.abs(difference),
                 reason.getId(),
                 sellerId
-        ));
+        ));*/
     }
 
     private void updateOrderItem(Order order, ProductOrderRequestDTO itemData, MovementReason reason, UUID sellerId) {
@@ -240,11 +246,11 @@ public class OrderService {
         order.setValue(subTotal.subtract(safeDiscount));
     }
 
-    private MovementReason findSaleReason() {
+    /*private MovementReason findSaleReason() {
         MovementReason reason = movementReasonRepository.findByReason("Venda");
         if (reason == null)
             throw new OrderException("Movement reason 'Venda' configuration missing", HttpStatus.INTERNAL_SERVER_ERROR);
         return reason;
-    }
+    }*/
 
 }

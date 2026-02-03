@@ -2,11 +2,13 @@ package org.wita.erp.services.stock;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.wita.erp.domain.entities.order.Order;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.StockMovement;
@@ -15,14 +17,17 @@ import org.wita.erp.domain.entities.stock.dtos.CreateStockRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateStockRequestDTO;
 import org.wita.erp.domain.entities.stock.mappers.StockMapper;
 import org.wita.erp.domain.entities.user.User;
+import org.wita.erp.domain.repositories.order.OrderRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
+import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.stock.StockException;
 import org.wita.erp.domain.repositories.stock.StockRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
+import org.wita.erp.services.order.CreateOrderObserver;
 import org.wita.erp.services.product.ProductService;
 
 import java.util.UUID;
@@ -36,6 +41,7 @@ public class StockService {
     private final StockMapper stockMapper;
     private final UserRepository userRepository;
     private final ProductService productService;
+    private final OrderRepository orderRepository;
 
     public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable, String searchTerm) {
         Page<StockMovement> stockPage;
@@ -112,5 +118,20 @@ public class StockService {
         stock.setActive(false);
         stockRepository.save(stock);
         return ResponseEntity.ok(stock);
+    }
+
+    @EventListener
+    @Transactional
+    public void onOrderCreated(CreateOrderObserver event) {
+        Order order = orderRepository.findById(event.getOrder())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        MovementReason movementReason = movementReasonRepository.findById(event.getMovementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+        order.getItems().forEach(orderItem -> {
+            CreateStockRequestDTO dto = new CreateStockRequestDTO(orderItem.getProduct().getId(), StockMovementType.OUT, orderItem.getQuantity(), movementReason.getId(), order.getSeller().getId());
+            this.save(dto);
+        });
     }
 }
