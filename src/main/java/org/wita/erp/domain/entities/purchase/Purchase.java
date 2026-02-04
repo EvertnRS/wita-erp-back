@@ -6,12 +6,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.wita.erp.domain.entities.order.OrderItem;
 import org.wita.erp.domain.entities.payment.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.supplier.Supplier;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -40,11 +43,20 @@ public class Purchase {
 
     private String description;
 
-    @Column(nullable = false)
-    private Boolean active = true;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PurchaseItem> items = new ArrayList<>();
+
+    public void addItem(PurchaseItem item) {
+        this.items.add(item);
+        item.setPurchase(this);
+    }
+
+    @Column(nullable = false)
+    private Boolean active = true;
+
 
 }

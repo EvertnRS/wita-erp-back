@@ -12,12 +12,15 @@ import org.wita.erp.domain.entities.purchase.Purchase;
 import org.wita.erp.domain.entities.purchase.dtos.CreatePurchaseRequestDTO;
 import org.wita.erp.domain.entities.purchase.dtos.UpdatePurchaseRequestDTO;
 import org.wita.erp.domain.entities.purchase.mappers.PurchaseMapper;
+import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
 import org.wita.erp.domain.repositories.purchase.PurchaseRepository;
+import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.supplier.SupplierRepository;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.purchase.PurchaseException;
+import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
 
 import java.util.UUID;
@@ -29,6 +32,7 @@ public class PurchaseService {
     private final PurchaseMapper purchaseMapper;
     private final SupplierRepository supplierRepository;
     private final PaymentTypeRepository paymentTypeRepository;
+    private final MovementReasonRepository movementReasonRepository;
 
     public ResponseEntity<Page<Purchase>> getAllPurchases(Pageable pageable, String searchTerm) {
         Page<Purchase> purchasePage;
@@ -52,6 +56,9 @@ public class PurchaseService {
 
         PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
+
+        MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
         Purchase purchase = new Purchase();
         purchase.setValue(data.value());

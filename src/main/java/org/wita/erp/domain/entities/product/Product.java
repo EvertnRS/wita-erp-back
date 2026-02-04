@@ -1,6 +1,8 @@
 package org.wita.erp.domain.entities.product;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import lombok.*;
@@ -27,6 +29,15 @@ public class Product {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
 
+    @DecimalMin("0.00")
+    @DecimalMax("1.00")
+    @Column(precision = 15, scale = 2, nullable = false)
+    private BigDecimal discount;
+
+    @Min(0)
+    @Column(name = "min_quantity_for_discount", nullable = false)
+    private int minQuantityForDiscount;
+
     @Min(0)
     @Column(name = "min_quantity", nullable = false)
     private Integer minQuantity;
@@ -46,5 +57,23 @@ public class Product {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // TODO: relacionar com compra
+    public BigDecimal calculateItemDiscount(
+            BigDecimal unitPrice,
+            int quantity
+    ) {
+
+        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        if (quantity < minQuantityForDiscount) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal gross =
+                unitPrice.multiply(BigDecimal.valueOf(quantity));
+
+        return gross.multiply(discount);
+    }
+
 }

@@ -3,6 +3,8 @@ CREATE TABLE product
     id                UUID                    DEFAULT gen_random_uuid() PRIMARY KEY,
     name              VARCHAR(255)   NOT NULL,
     price             NUMERIC(15, 2) NOT NULL,
+    discount          NUMERIC(15, 2) NOT NULL,
+    min_quantity_for_discount INTEGER NOT NULL,
     min_quantity      INTEGER        NOT NULL,
     quantity_in_stock INTEGER        NOT NULL,
     active            BOOLEAN                 DEFAULT TRUE,

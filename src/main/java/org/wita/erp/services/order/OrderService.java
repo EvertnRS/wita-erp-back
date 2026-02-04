@@ -91,6 +91,8 @@ public class OrderService {
         }
 
         Order order = new Order();
+        order.setDescription(data.description());
+        order.setDiscount(data.discount());
         order.setCustomer(customer);
         order.setSeller(seller);
         order.setTransactionCode(data.transactionCode());
@@ -101,14 +103,19 @@ public class OrderService {
                     .orElseThrow(() -> new ProductException("Product " + itemData.product() + " not found", HttpStatus.NOT_FOUND));
 
             OrderItem orderItem = createOrderItem(product, itemData.quantity());
+            BigDecimal itemDiscount = product.calculateItemDiscount(orderItem.getUnitPrice(), itemData.quantity());
+
+            orderItem.calculateTotal(itemDiscount);
             order.addItem(orderItem);
         }
 
-        applyDiscountAndCalculateTotal(order, data.discount());
+        order.applyOrderDiscount();
 
         orderRepository.save(order);
 
-        publisher.publishEvent(new CreateOrderObserver(order.getId(), movementReason.getId()));
+        publisher.publishEvent(
+                new CreateOrderObserver(order.getId(), movementReason.getId())
+        );
 
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
@@ -214,7 +221,7 @@ public class OrderService {
 
     @EventListener
     @Async
-    public void onStockCompensationCreated(StockCompensationObserver event) {
+    public void onStockCompensation(StockCompensationObserver event) {
         orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 

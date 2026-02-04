@@ -23,6 +23,7 @@ import org.wita.erp.domain.repositories.product.CategoryRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.services.stock.StockMovementObserver;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -53,16 +54,29 @@ public class ProductService {
             throw new ProductException("Product already exists", HttpStatus.CONFLICT);
         }
 
-        Product product = new Product();
-        product.setName(data.name());
-        product.setPrice(data.price());
-        product.setMinQuantity(data.minQuantity());
-        product.setQuantityInStock(data.quantityInStock());
-        product.setCategory(category);
+        Product product = getProduct(data, category);
 
         productRepository.save(product);
 
         return ResponseEntity.ok(product);
+    }
+
+    private Product getProduct(CreateProductRequestDTO data, Category category) {
+        Product product = new Product();
+        product.setName(data.name());
+        product.setPrice(data.price());
+        product.setDiscount(data.discount());
+
+        if (data.discount().compareTo(BigDecimal.ZERO) > 0) {
+            product.setMinQuantityForDiscount(data.minQuantityForDiscount());
+        } else {
+            product.setMinQuantityForDiscount(0);
+        }
+
+        product.setMinQuantity(data.minQuantity());
+        product.setQuantityInStock(data.quantityInStock());
+        product.setCategory(category);
+        return product;
     }
 
     public ResponseEntity<Product> update(UUID id, UpdateProductRequestDTO data) {

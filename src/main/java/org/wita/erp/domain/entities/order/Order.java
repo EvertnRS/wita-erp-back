@@ -1,6 +1,9 @@
 package org.wita.erp.domain.entities.order;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,7 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "order")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,11 +35,15 @@ public class Order {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal value;
 
-    @Column(precision = 15, scale = 2)
+    @DecimalMin("0.00")
+    @DecimalMax("1.00")
+    @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal discount;
 
     @Column(name = "transaction_code", nullable = false, unique = true)
     private String transactionCode;
+
+    private String description;
 
     @ManyToOne
     @JoinColumn(name = "seller_id", nullable = false)
@@ -64,4 +71,21 @@ public class Order {
 
     @Column(nullable = false)
     private Boolean active = true;
+
+    public void applyOrderDiscount() {
+
+        BigDecimal subTotal = items.stream()
+                .map(OrderItem::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
+            this.value = subTotal;
+            return;
+        }
+
+        BigDecimal orderDiscount =
+                subTotal.multiply(discount);
+
+        this.value = subTotal.subtract(orderDiscount);
+    }
 }
