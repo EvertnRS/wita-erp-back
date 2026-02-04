@@ -13,6 +13,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.order.Order;
 import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.domain.entities.purchase.Purchase;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.StockMovement;
 import org.wita.erp.domain.entities.stock.StockMovementType;
@@ -22,15 +23,18 @@ import org.wita.erp.domain.entities.stock.mappers.StockMapper;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.order.OrderRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
+import org.wita.erp.domain.repositories.purchase.PurchaseRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.product.ProductException;
+import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.stock.StockException;
 import org.wita.erp.domain.repositories.stock.StockRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.order.CreateOrderObserver;
+import org.wita.erp.services.purchase.CreatePurchaseObserver;
 
 import java.util.UUID;
 
@@ -43,6 +47,7 @@ public class StockService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final PurchaseRepository purchaseRepository;
     private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable, String searchTerm) {
@@ -139,7 +144,29 @@ public class StockService {
             });
 
         } catch (Exception e) {
-            publisher.publishEvent(new StockCompensationObserver(event.order()));
+            publisher.publishEvent(new StockCompensationOrderObserver(event.order()));
+            throw new StockException("Failed to process stock movements for order: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional
+    @Async
+    public void onPurchaseCreated(CreatePurchaseObserver event) {
+        try{
+            Purchase purchase = purchaseRepository.findById(event.purchase())
+                    .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
+
+            MovementReason movementReason = movementReasonRepository.findById(event.movementReason())
+                    .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+            purchase.getItems().forEach(purchaseItem -> {
+                CreateStockRequestDTO dto = new CreateStockRequestDTO(purchaseItem.getProduct().getId(), StockMovementType.IN, purchaseItem.getQuantity(), movementReason.getId(), purchase.getBuyer().getId());
+                this.save(dto);
+            });
+
+        } catch (Exception e) {
+            publisher.publishEvent(new StockCompensationPurchaseObserver(event.purchase()));
             throw new StockException("Failed to process stock movements for order: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

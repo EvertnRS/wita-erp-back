@@ -27,15 +27,18 @@ import org.wita.erp.domain.repositories.customer.CustomerRepository;
 import org.wita.erp.domain.repositories.order.OrderRepository;
 import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
+import org.wita.erp.domain.repositories.purchase.PurchaseRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.customer.CustomerException;
 import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
+import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
-import org.wita.erp.services.stock.StockCompensationObserver;
+import org.wita.erp.services.stock.StockCompensationOrderObserver;
+import org.wita.erp.services.stock.StockCompensationPurchaseObserver;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -44,6 +47,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderService {
     private final OrderRepository orderRepository;
+    private final PurchaseRepository purchaseRepository;
     private final OrderMapper orderMapper;
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
@@ -53,15 +57,15 @@ public class OrderService {
     private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<OrderDTO>> getAllOrders(Pageable pageable, String searchTerm) {
-        Page<Order> purchasePage;
+        Page<Order> orderPage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
-            purchasePage = orderRepository.findBySearchTerm(searchTerm, pageable);
+            orderPage = orderRepository.findBySearchTerm(searchTerm, pageable);
         } else {
-            purchasePage = orderRepository.findAll(pageable);
+            orderPage = orderRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(purchasePage.map(orderMapper::toDTO));
+        return ResponseEntity.ok(orderPage.map(orderMapper::toDTO));
     }
 
     @Transactional
@@ -221,7 +225,7 @@ public class OrderService {
 
     @EventListener
     @Async
-    public void onStockCompensation(StockCompensationObserver event) {
+    public void onStockCompensationOrder(StockCompensationOrderObserver event) {
         orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 

@@ -32,6 +32,7 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.AUTO) @Id
     private UUID id;
 
+    @Positive
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal value;
 
@@ -53,24 +54,24 @@ public class Order {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
     @ManyToOne
     @JoinColumn(name = "payment_type_id", nullable = false)
     private PaymentType paymentType;
 
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
+
+    @Column(nullable = false)
+    private Boolean active = true;
 
     public void addItem(OrderItem item) {
         this.items.add(item);
         item.setOrder(this);
     }
-
-    @Column(nullable = false)
-    private Boolean active = true;
 
     public void applyOrderDiscount() {
 

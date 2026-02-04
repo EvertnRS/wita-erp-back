@@ -7,6 +7,6 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public record StockCompensationObserver(UUID order) {
+public record StockCompensationOrderObserver(UUID order) {
 }
 
