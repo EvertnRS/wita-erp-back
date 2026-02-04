@@ -2,12 +2,15 @@ package org.wita.erp.services.stock;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.event.EventListener;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.order.Order;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
@@ -36,12 +39,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StockService {
     private final StockRepository stockRepository;
-    private final ProductRepository productRepository;
     private final MovementReasonRepository movementReasonRepository;
     private final StockMapper stockMapper;
+    private final ProductRepository productRepository;
     private final UserRepository userRepository;
-    private final ProductService productService;
     private final OrderRepository orderRepository;
+    private final ProductService productService;
+    private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable, String searchTerm) {
         Page<StockMovement> stockPage;
@@ -120,18 +124,24 @@ public class StockService {
         return ResponseEntity.ok(stock);
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional
+    @Async
     public void onOrderCreated(CreateOrderObserver event) {
-        Order order = orderRepository.findById(event.getOrder())
-                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+        try{
+            Order order = orderRepository.findById(event.order())
+                    .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
-        MovementReason movementReason = movementReasonRepository.findById(event.getMovementReason())
-                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+            MovementReason movementReason = movementReasonRepository.findById(event.movementReason())
+                    .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
-        order.getItems().forEach(orderItem -> {
-            CreateStockRequestDTO dto = new CreateStockRequestDTO(orderItem.getProduct().getId(), StockMovementType.OUT, orderItem.getQuantity(), movementReason.getId(), order.getSeller().getId());
-            this.save(dto);
-        });
+            order.getItems().forEach(orderItem -> {
+                CreateStockRequestDTO dto = new CreateStockRequestDTO(orderItem.getProduct().getId(), StockMovementType.OUT, orderItem.getQuantity(), movementReason.getId(), order.getSeller().getId());
+                this.save(dto);
+            });
+        } catch (Exception e) {
+            publisher.publishEvent(new StockCompensationObserver(event.order()));
+            throw new StockException("Failed to process stock movements for order: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

@@ -3,13 +3,13 @@ package org.wita.erp.services.order;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.order.OrderItem;
 import org.wita.erp.domain.entities.order.dtos.CreateOrderRequestDTO;
@@ -23,7 +23,6 @@ import org.wita.erp.domain.entities.order.Order;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.StockMovementType;
-import org.wita.erp.domain.entities.stock.dtos.CreateStockRequestDTO;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
 import org.wita.erp.domain.repositories.order.OrderRepository;
@@ -37,7 +36,7 @@ import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
-import org.wita.erp.services.stock.StockService;
+import org.wita.erp.services.stock.StockCompensationObserver;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -51,8 +50,8 @@ public class OrderService {
     private final UserRepository userRepository;
     private final PaymentTypeRepository paymentTypeRepository;
     private final ProductRepository productRepository;
-    private final ApplicationEventPublisher publisher;
     private final MovementReasonRepository movementReasonRepository;
+    private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<OrderDTO>> getAllOrders(Pageable pageable, String searchTerm) {
         Page<Order> purchasePage;
@@ -66,7 +65,7 @@ public class OrderService {
         return ResponseEntity.ok(purchasePage.map(orderMapper::toDTO));
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional
     public ResponseEntity<OrderDTO> save(CreateOrderRequestDTO data) {
         if (orderRepository.findByTransactionCode(data.transactionCode()) != null) {
             throw new OrderException("Transaction code already exists", HttpStatus.BAD_REQUEST);
@@ -189,39 +188,6 @@ public class OrderService {
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
 
-
-    private void handleStockMovement(Product product, int difference, MovementReason reason, UUID sellerId) {
-        if (difference == 0) return;
-
-        StockMovementType type = difference > 0 ? StockMovementType.OUT : StockMovementType.IN;
-
-        if (type == StockMovementType.OUT && product.getQuantityInStock() < Math.abs(difference)) {
-            throw new ProductException("Product " + product.getName() + " quantity less than stock", HttpStatus.BAD_REQUEST);
-        }
-
-        /*stockService.save(new CreateStockRequestDTO(
-                product.getId(),
-                type,
-                Math.abs(difference),
-                reason.getId(),
-                sellerId
-        ));*/
-    }
-
-    private void updateOrderItem(Order order, ProductOrderRequestDTO itemData, MovementReason reason, UUID sellerId) {
-        OrderItem item = order.getItems().stream()
-                .filter(i -> i.getProduct().getId().equals(itemData.product()))
-                .findFirst()
-                .orElseThrow(() -> new OrderException("Product not found in Order", HttpStatus.NOT_FOUND));
-
-        int difference = itemData.quantity() - item.getQuantity();
-
-        handleStockMovement(item.getProduct(), difference, reason, sellerId);
-
-        item.setQuantity(itemData.quantity());
-        item.setTotal(item.getUnitPrice().multiply(BigDecimal.valueOf(itemData.quantity())));
-    }
-
     private OrderItem createOrderItem(Product product, int quantity) {
         OrderItem orderItem = new OrderItem();
         orderItem.setProduct(product);
@@ -246,11 +212,14 @@ public class OrderService {
         order.setValue(subTotal.subtract(safeDiscount));
     }
 
-    /*private MovementReason findSaleReason() {
-        MovementReason reason = movementReasonRepository.findByReason("Venda");
-        if (reason == null)
-            throw new OrderException("Movement reason 'Venda' configuration missing", HttpStatus.INTERNAL_SERVER_ERROR);
-        return reason;
-    }*/
+    @Transactional
+    @EventListener
+    @Async
+    public void onStockCompensationCreated(StockCompensationObserver event) {
+        orderRepository.findById(event.order())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        this.delete(event.order());
+    }
 
 }
