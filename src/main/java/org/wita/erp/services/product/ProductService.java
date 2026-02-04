@@ -2,6 +2,7 @@ package org.wita.erp.services.product;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +31,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+    private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<Product>> getAllProducts(Pageable pageable, String searchTerm) {
         Page<Product> productPage;
@@ -89,7 +91,6 @@ public class ProductService {
 
     @Transactional
     @EventListener
-    @Async
     public void onStockMovement(StockMovementObserver event) {
         Product product = productRepository.findById(event.product())
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
@@ -100,12 +101,6 @@ public class ProductService {
         }
 
         else if (event.stockMovementType() == StockMovementType.OUT) {
-
-            if (product.getQuantityInStock() <= product.getMinQuantity()) {
-
-                throw new ProductException("Not enough stock for product: " + product.getName(), HttpStatus.BAD_REQUEST);
-            }
-
             product.setQuantityInStock(product.getQuantityInStock() - event.quantity());
             productRepository.save(product);
         }

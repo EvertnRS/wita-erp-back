@@ -185,6 +185,10 @@ public class OrderService {
     }
 
     private OrderItem createOrderItem(Product product, int quantity) {
+        if ((product.getQuantityInStock() - quantity) <= product.getMinQuantity()){
+            throw new ProductException("Not enough stock for product: " + product.getName(), HttpStatus.BAD_REQUEST);
+        }
+
         OrderItem orderItem = new OrderItem();
         orderItem.setProduct(product);
         orderItem.setQuantity(quantity);
