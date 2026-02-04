@@ -31,7 +31,6 @@ import org.wita.erp.infra.exceptions.stock.StockException;
 import org.wita.erp.domain.repositories.stock.StockRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.order.CreateOrderObserver;
-import org.wita.erp.services.product.ProductService;
 
 import java.util.UUID;
 
@@ -44,7 +43,6 @@ public class StockService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
-    private final ProductService productService;
     private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable, String searchTerm) {
@@ -71,9 +69,9 @@ public class StockService {
                 .orElseThrow(() -> new UserException("User not registered in the system", HttpStatus.NOT_FOUND));
 
         if(data.stockMovementType() == StockMovementType.IN) {
-            productService.addProductInStock(data.product(), data.quantity());
+            publisher.publishEvent(new StockMovementObserver(StockMovementType.IN, product.getId(), data.quantity()));
         } else if (data.stockMovementType() == StockMovementType.OUT) {
-            productService.removeProductFromStock(data.product(), data.quantity());
+            publisher.publishEvent(new StockMovementObserver(StockMovementType.OUT, product.getId(), data.quantity()));
         }
 
         StockMovement stock = new StockMovement();
@@ -139,6 +137,7 @@ public class StockService {
                 CreateStockRequestDTO dto = new CreateStockRequestDTO(orderItem.getProduct().getId(), StockMovementType.OUT, orderItem.getQuantity(), movementReason.getId(), order.getSeller().getId());
                 this.save(dto);
             });
+
         } catch (Exception e) {
             publisher.publishEvent(new StockCompensationObserver(event.order()));
             throw new StockException("Failed to process stock movements for order: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

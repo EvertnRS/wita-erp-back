@@ -1,20 +1,26 @@
 package org.wita.erp.services.product;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.product.mappers.ProductMapper;
 import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.domain.entities.stock.StockMovement;
+import org.wita.erp.domain.entities.stock.StockMovementType;
 import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.domain.repositories.product.CategoryRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
+import org.wita.erp.services.stock.StockMovementObserver;
 
 import java.util.UUID;
 
@@ -81,21 +87,27 @@ public class ProductService {
         return ResponseEntity.ok(product);
     }
 
-    public ResponseEntity<Product> addProductInStock(UUID id, Integer quantity) {
-        Product product = productRepository.findById(id)
+    @Transactional
+    @EventListener
+    @Async
+    public void onStockMovement(StockMovementObserver event) {
+        Product product = productRepository.findById(event.product())
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
 
-        product.setQuantityInStock(product.getQuantityInStock() + quantity);
-        productRepository.save(product);
-        return ResponseEntity.ok(product);
-    }
+        if (event.stockMovementType() == StockMovementType.IN) {
+            product.setQuantityInStock(product.getQuantityInStock() + event.quantity());
+            productRepository.save(product);
+        }
 
-    public ResponseEntity<Product> removeProductFromStock(UUID id, Integer quantity) {
-        Product product = productRepository.findById(id)
-                .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
+        else if (event.stockMovementType() == StockMovementType.OUT) {
 
-        product.setQuantityInStock(product.getQuantityInStock() - quantity);
-        productRepository.save(product);
-        return ResponseEntity.ok(product);
+            if (product.getQuantityInStock() <= product.getMinQuantity()) {
+
+                throw new ProductException("Not enough stock for product: " + product.getName(), HttpStatus.BAD_REQUEST);
+            }
+
+            product.setQuantityInStock(product.getQuantityInStock() - event.quantity());
+            productRepository.save(product);
+        }
     }
 }

@@ -22,7 +22,6 @@ import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.order.Order;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
-import org.wita.erp.domain.entities.stock.StockMovementType;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
 import org.wita.erp.domain.repositories.order.OrderRepository;
@@ -167,9 +166,6 @@ public class OrderService {
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
         Product product = productRepository.findById(data.product())
                 .orElseThrow(() -> new ProductException("Product " + data.product() + " not found", HttpStatus.NOT_FOUND));
-        /*MovementReason reason = findSaleReason();*/
-
-        /*handleStockMovement(product, data.quantity(), reason, order.getSeller().getId());*/
 
         OrderItem orderItem = createOrderItem(product, data.quantity());
         order.addItem(orderItem);
@@ -212,7 +208,6 @@ public class OrderService {
         order.setValue(subTotal.subtract(safeDiscount));
     }
 
-    @Transactional
     @EventListener
     @Async
     public void onStockCompensationCreated(StockCompensationObserver event) {
