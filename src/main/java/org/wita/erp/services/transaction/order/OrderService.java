@@ -181,7 +181,7 @@ public class OrderService {
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
 
-    @Transactional
+    /*@Transactional
     public ResponseEntity<OrderDTO> addProductInOrder(UUID orderId, ProductOrderRequestDTO data) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
@@ -199,7 +199,7 @@ public class OrderService {
         orderRepository.save(order);
 
         return ResponseEntity.ok(orderMapper.toDTO(order));
-    }
+    }*/
 
     public ResponseEntity<OrderDTO> delete(UUID id) {
         Order order = orderRepository.findById(id)

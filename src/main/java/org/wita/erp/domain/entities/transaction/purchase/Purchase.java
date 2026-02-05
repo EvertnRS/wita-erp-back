@@ -1,22 +1,17 @@
 package org.wita.erp.domain.entities.transaction.purchase;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
-import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.user.User;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "purchase")
@@ -46,5 +41,13 @@ public class Purchase extends Transaction {
     public void removeItens() {
         this.items.clear();
     }
+
+    public void calculateSubTotal() {
+        this.value = items.stream()
+                .map(PurchaseItem::getTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    }
+
 
 }

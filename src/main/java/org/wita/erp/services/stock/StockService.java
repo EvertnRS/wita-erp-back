@@ -231,7 +231,7 @@ public class StockService {
                 .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
         order.getItems().forEach(orderItem -> {
-            StockMovement stockMovement = stockRepository.findByTransactionAndProduct(order, orderItem.getProduct());
+            StockMovement stockMovement = stockRepository.findByTransactionIdAndProductId(order.getId(), orderItem.getProduct().getId());
             UpdateStockRequestDTO dto = new UpdateStockRequestDTO(orderItem.getProduct().getId(), orderItem.getQuantity(), movementReason.getId(), order.getId(), order.getSeller().getId());
             this.update(stockMovement.getId(), dto);
         });
@@ -248,7 +248,7 @@ public class StockService {
                 .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
         purchase.getItems().forEach(purchaseItem -> {
-            StockMovement stockMovement = stockRepository.findByTransactionAndProduct(purchase, purchaseItem.getProduct());
+            StockMovement stockMovement = stockRepository.findByTransactionIdAndProductId(purchase.getId(), purchaseItem.getProduct().getId());
             UpdateStockRequestDTO dto = new UpdateStockRequestDTO(purchaseItem.getProduct().getId(), purchaseItem.getQuantity(), movementReason.getId(), purchase.getId(), purchase.getBuyer().getId());
             this.update(stockMovement.getId(), dto);
         });

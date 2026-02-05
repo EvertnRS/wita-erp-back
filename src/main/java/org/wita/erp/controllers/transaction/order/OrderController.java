@@ -34,11 +34,11 @@ public class OrderController {
         return orderService.save(data);
     }
 
-    @PostMapping("/add-item/{orderId}")
+    /*@PostMapping("/add-item/{orderId}")
     @PreAuthorize("hasAuthority('ORDER_UPDATE')")
     public ResponseEntity<OrderDTO> addProductInOrder(@PathVariable UUID orderId, @RequestBody @Valid ProductOrderRequestDTO data) {
         return orderService.addProductInOrder(orderId, data);
-    }
+    }*/
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ORDER_UPDATE')")

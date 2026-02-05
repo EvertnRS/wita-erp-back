@@ -17,18 +17,17 @@ import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.transaction.purchase.PurchaseItem;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.CreatePurchaseRequestDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.ProductPurchaseRequestDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.PurchaseDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePurchaseRequestDTO;
+import org.wita.erp.domain.entities.transaction.purchase.dtos.*;
 import org.wita.erp.domain.entities.transaction.purchase.mappers.PurchaseMapper;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
+import org.wita.erp.domain.repositories.stock.StockRepository;
 import org.wita.erp.domain.repositories.supplier.SupplierRepository;
 import org.wita.erp.domain.repositories.transaction.purchase.PurchaseRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
+import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.purchase.PurchaseException;
@@ -52,6 +51,7 @@ public class PurchaseService {
     private final PaymentTypeRepository paymentTypeRepository;
     private final MovementReasonRepository movementReasonRepository;
     private final UserRepository userRepository;
+    private final StockRepository stockRepository;
     private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<PurchaseDTO>> getAllPurchases(Pageable pageable, String searchTerm) {
@@ -67,7 +67,7 @@ public class PurchaseService {
     }
 
     @Transactional
-    public ResponseEntity<PurchaseDTO> save(CreatePurchaseRequestDTO data){
+    public ResponseEntity<PurchaseDTO> save(CreateReplacementPurchaseRequestDTO data){
         if (purchaseRepository.findByTransactionCode(data.transactionCode()) != null) {
             throw new PurchaseException("Transaction code already exists", HttpStatus.BAD_REQUEST);
         }
@@ -90,6 +90,48 @@ public class PurchaseService {
         }
 
         Purchase purchase = new Purchase();
+        purchase.setDescription(data.description());
+        purchase.setTransactionCode(data.transactionCode());
+        purchase.setBuyer(buyer);
+        purchase.setSupplier(supplier);
+        purchase.setPaymentType(paymentType);
+
+        for (ProductPurchaseRequestDTO itemData : data.products()) {
+            Product product = productRepository.findById(itemData.product())
+                    .orElseThrow(() -> new ProductException("Product " + itemData.product() + " not found", HttpStatus.NOT_FOUND));
+
+            PurchaseItem purchaseItem = createPurchaseItem(product, itemData.quantity());
+            purchase.addItem(purchaseItem);
+        }
+
+        purchase.calculateSubTotal();
+        purchaseRepository.save(purchase);
+
+        publisher.publishEvent(
+                new CreatePurchaseObserver(purchase.getId(), movementReason.getId())
+        );
+
+        purchaseRepository.save(purchase);
+
+        return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
+    }
+
+    @Transactional
+    public ResponseEntity<PurchaseDTO> save(CreateExpensePurchaseRequestDTO data){
+        if (purchaseRepository.findByTransactionCode(data.transactionCode()) != null) {
+            throw new PurchaseException("Transaction code already exists", HttpStatus.BAD_REQUEST);
+        }
+
+        User buyer = userRepository.findById(data.buyer())
+                .orElseThrow(() -> new PurchaseException("Buyer not found", HttpStatus.NOT_FOUND));
+
+        Supplier supplier = supplierRepository.findById(data.supplier())
+                .orElseThrow(() -> new SupplierException("Supplier not registered in the system", HttpStatus.NOT_FOUND));
+
+        PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
+                .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
+
+        Purchase purchase = new Purchase();
         purchase.setValue(data.value());
         purchase.setDescription(data.description());
         purchase.setTransactionCode(data.transactionCode());
@@ -97,39 +139,19 @@ public class PurchaseService {
         purchase.setSupplier(supplier);
         purchase.setPaymentType(paymentType);
 
-        if (!data.products().isEmpty()) {
-            for (ProductPurchaseRequestDTO itemData : data.products()) {
-                Product product = productRepository.findById(itemData.product())
-                        .orElseThrow(() -> new ProductException("Product " + itemData.product() + " not found", HttpStatus.NOT_FOUND));
-
-                PurchaseItem purchaseItem = createPurchaseItem(product, itemData.quantity());
-                purchase.addItem(purchaseItem);
-            }
-
-            purchaseRepository.save(purchase);
-
-            publisher.publishEvent(
-                    new CreatePurchaseObserver(purchase.getId(), movementReason.getId())
-            );
-
-        } else{
-            purchaseRepository.save(purchase);
-        }
+        purchaseRepository.save(purchase);
 
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
 
     @Transactional
-    public ResponseEntity<PurchaseDTO> update(UUID id, UpdatePurchaseRequestDTO data) {
+    public ResponseEntity<PurchaseDTO> update(UUID id, UpdatePurchaseReplacementRequestDTO data) {
         Purchase purchase = purchaseRepository.findById(id)
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
         if (purchaseRepository.findByTransactionCode(data.transactionCode()) != null) {
             throw new PurchaseException("Transaction code already exists", HttpStatus.BAD_REQUEST);
         }
-
-        MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
-                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
         if(data.buyer() != null){
             User buyer = userRepository.findById(data.buyer())
@@ -154,9 +176,30 @@ public class PurchaseService {
             purchase.setPaymentType(paymentType);
         }
 
-        purchaseMapper.updatePurchaseFromDTO(data, purchase);
+        UpdatePurchaseRequestDTO updateDTO = new UpdatePurchaseRequestDTO(data.transactionCode(), data.description());
 
         if (!data.products().isEmpty()) {
+            long uniqueIds = data.products().stream().map(ProductPurchaseRequestDTO::product).distinct().count();
+            if (uniqueIds != data.products().size()) {
+                throw new PurchaseException("Duplicate products found. Combine quantities.", HttpStatus.BAD_REQUEST);
+            }
+
+            MovementReason movementReason;
+            if(data.movementReason() != null){
+                movementReason = movementReasonRepository.findById(data.movementReason())
+                        .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+            }
+            else{
+                UUID productId = data.products().stream()
+                        .findFirst()
+                        .map(ProductPurchaseRequestDTO::product)
+                        .orElseThrow(() ->
+                                new OrderException("No products informed", HttpStatus.BAD_REQUEST)
+                        );
+
+                movementReason  = stockRepository.findByTransactionIdAndProductId(purchase.getId(), productId).getMovementReason();
+            }
+
             purchase.removeItens();
 
             for (ProductPurchaseRequestDTO itemData : data.products()) {
@@ -167,18 +210,60 @@ public class PurchaseService {
                 purchase.addItem(purchaseItem);
             }
 
-            purchaseMapper.updatePurchaseFromDTO(data, purchase);
+            purchase.calculateSubTotal();
+            purchaseMapper.updatePurchaseFromDTO(updateDTO, purchase);
             purchaseRepository.save(purchase);
-
             publisher.publishEvent(
                     new UpdatePurchaseObserver(purchase.getId(), movementReason.getId())
             );
         }
 
-        else{
-            purchaseMapper.updatePurchaseFromDTO(data, purchase);
-            purchaseRepository.save(purchase);
+        purchaseMapper.updatePurchaseFromDTO(updateDTO, purchase);
+        purchaseRepository.save(purchase);
+
+        return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
+    }
+
+    @Transactional
+    public ResponseEntity<PurchaseDTO> update(UUID id, UpdatePurchaseExpenseRequestDTO data) {
+        Purchase purchase = purchaseRepository.findById(id)
+                .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
+
+        if (purchaseRepository.findByTransactionCode(data.transactionCode()) != null) {
+            throw new PurchaseException("Transaction code already exists", HttpStatus.BAD_REQUEST);
         }
+
+        if(data.buyer() != null){
+            User buyer = userRepository.findById(data.buyer())
+                    .orElseThrow(() -> new UserException("Buyer not found", HttpStatus.NOT_FOUND));
+            purchase.setBuyer(buyer);
+
+        }
+
+        if (data.supplier() != null){
+            Supplier supplier = supplierRepository.findById(data.supplier())
+                    .orElseThrow(() -> new SupplierException("Supplier not registered in the system", HttpStatus.NOT_FOUND));
+            purchase.setSupplier(supplier);
+        }
+
+        if (data.paymentType() != null){
+            PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
+                    .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
+
+            if (!(paymentType instanceof CompanyPaymentType)) {
+                throw new PurchaseException("Payment Type must be of type CompanyPaymentType for purchases", HttpStatus.BAD_REQUEST);
+            }
+            purchase.setPaymentType(paymentType);
+        }
+
+        if (data.value() != null){
+            purchase.setValue(data.value());
+        }
+
+        UpdatePurchaseRequestDTO updateDTO = new UpdatePurchaseRequestDTO(data.transactionCode(), data.description());
+
+        purchaseMapper.updatePurchaseFromDTO(updateDTO, purchase);
+        purchaseRepository.save(purchase);
 
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
@@ -191,7 +276,7 @@ public class PurchaseService {
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
 
-    @Transactional
+    /*@Transactional
     public ResponseEntity<PurchaseDTO> addProductInPurchase(UUID purchaseId, ProductPurchaseRequestDTO data) {
         Purchase purchase = purchaseRepository.findById(purchaseId)
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
@@ -203,7 +288,7 @@ public class PurchaseService {
 
         purchaseRepository.save(purchase);
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
-    }
+    }*/
 
     private PurchaseItem createPurchaseItem(Product product, int quantity) {
         if ((product.getQuantityInStock() - quantity) <= product.getMinQuantity()){
