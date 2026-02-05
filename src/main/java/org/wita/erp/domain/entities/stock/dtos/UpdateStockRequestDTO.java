@@ -6,8 +6,8 @@ import org.wita.erp.domain.entities.stock.StockMovementType;
 import java.util.UUID;
 
 public record UpdateStockRequestDTO(UUID product,
-                                    StockMovementType stockMovementType,
                                     @Positive Integer quantity,
                                     UUID movementReason,
+                                    UUID transaction,
                                     UUID user) {
 }

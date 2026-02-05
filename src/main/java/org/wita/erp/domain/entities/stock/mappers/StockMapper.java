@@ -8,6 +8,7 @@ import org.wita.erp.domain.entities.stock.dtos.UpdateStockRequestDTO;
 public interface StockMapper {
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "movementReason", ignore = true)
+    @Mapping(target = "transaction", ignore = true)
     @Mapping(target = "user", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateStockFromDTO(UpdateStockRequestDTO dto, @MappingTarget StockMovement stock);

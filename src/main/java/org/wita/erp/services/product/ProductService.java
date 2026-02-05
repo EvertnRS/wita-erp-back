@@ -8,20 +8,19 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.product.mappers.ProductMapper;
 import org.wita.erp.domain.entities.product.Product;
-import org.wita.erp.domain.entities.stock.StockMovement;
 import org.wita.erp.domain.entities.stock.StockMovementType;
 import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.domain.repositories.product.CategoryRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
-import org.wita.erp.services.stock.StockMovementObserver;
+import org.wita.erp.services.stock.observers.StockMovementObserver;
+import org.wita.erp.services.stock.observers.UpdateStockMovementObserver;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -118,5 +117,22 @@ public class ProductService {
             product.setQuantityInStock(product.getQuantityInStock() - event.quantity());
             productRepository.save(product);
         }
+    }
+
+    @Transactional
+    @EventListener
+    public void onUpdateStockMovement(UpdateStockMovementObserver event) {
+        Product product = productRepository.findById(event.product())
+                .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
+
+        int adjustedQuantity = event.newQuantity() - product.getQuantityInStock();
+
+        if (adjustedQuantity > 0) {
+            product.setQuantityInStock(product.getQuantityInStock() + adjustedQuantity);
+        } else if (adjustedQuantity < 0) {
+            product.setQuantityInStock(product.getQuantityInStock() + adjustedQuantity);
+        }
+
+        productRepository.save(product);
     }
 }
