@@ -1,6 +1,8 @@
 package org.wita.erp.services.user;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -16,9 +18,10 @@ import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.domain.repositories.user.RoleRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
+import org.wita.erp.services.user.observers.RequestRecoveryObserver;
+import org.wita.erp.services.user.observers.ResetPasswordObserver;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -90,16 +93,20 @@ public class UserService {
         return ResponseEntity.ok(userMapper.toUserDTO(user));
     }
 
-    public void saveResetToken(User user, String token, LocalDateTime expiresAt) {
-        user.setResetToken(token);
-        user.setResetTokenExpiresAt(expiresAt);
-        userRepository.save(user);
+    @EventListener
+    @Transactional
+    public void onRequestRecovery(RequestRecoveryObserver event) {
+        event.user().setResetToken(event.encodedToken());
+        event.user().setResetTokenExpiresAt(event.expiresAt());
+        userRepository.save(event.user());
     }
 
-    public void updateResetToken(User user, String newPassword) {
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setResetToken(null);
-        user.setResetTokenExpiresAt(null);
-        userRepository.save(user);
+    @EventListener
+    @Transactional
+    public void onResetPassword(ResetPasswordObserver event) {
+        event.user().setPassword(passwordEncoder.encode(event.newPassword()));
+        event.user().setResetToken(null);
+        event.user().setResetTokenExpiresAt(null);
+        userRepository.save(event.user());
     }
 }

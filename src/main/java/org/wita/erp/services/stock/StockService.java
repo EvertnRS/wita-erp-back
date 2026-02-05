@@ -1,7 +1,6 @@
 package org.wita.erp.services.stock;
 
 import jakarta.transaction.Transactional;
-import jakarta.transaction.TransactionalException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -12,7 +11,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.product.Product;
@@ -39,7 +37,6 @@ import org.wita.erp.domain.repositories.stock.StockRepository;
 import org.wita.erp.infra.exceptions.transaction.TransactionException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.transaction.order.observers.CreateOrderObserver;
-import org.wita.erp.services.transaction.purchase.PurchaseService;
 import org.wita.erp.services.transaction.purchase.observers.CreatePurchaseObserver;
 import org.wita.erp.services.transaction.purchase.observers.UpdatePurchaseObserver;
 import org.wita.erp.services.stock.observers.StockCompensationOrderObserver;
@@ -166,8 +163,6 @@ public class StockService {
 
         stockMapper.updateStockFromDTO(data, stock);
         stockRepository.save(stock);
-
-
 
         return ResponseEntity.ok(stock);
     }
