@@ -1,8 +1,10 @@
 package org.wita.erp.services.user;
 
 import jakarta.mail.MessagingException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +21,8 @@ import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.infra.providers.auth.AuthProvider;
 import org.wita.erp.infra.providers.email.EmailProvider;
+import org.wita.erp.services.user.observers.RequestRecoveryObserver;
+import org.wita.erp.services.user.observers.ResetPasswordObserver;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -31,13 +35,13 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final AuthProvider authProvider;
     private final EmailProvider emailProvider;
-    private final UserService userService;
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher publisher;
 
-    @Value("${app.backend.url}")
-    private String backendUrl;
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     public ResponseEntity<LoginResponseDTO> login(AuthenticationDTO data) {
         var userNamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.password());
@@ -69,11 +73,11 @@ public class AuthenticationService {
                 user.getName(),
                 LocalDateTime.now().format(formatter),
                 "Redefinir Senha",
-                backendUrl + "auth/reset"  + "?token=" + rawToken);
+                frontendUrl + "auth/reset"  + "?token=" + rawToken);
 
         emailProvider.sendEmail(data.email(), "Redefinição de senha", template);
 
-        userService.saveResetToken(user, encodedToken, expiresAt);
+        publisher.publishEvent(new RequestRecoveryObserver(user, encodedToken, expiresAt));
 
         return ResponseEntity.ok("Reset link sent");
     }
@@ -91,7 +95,7 @@ public class AuthenticationService {
             throw new UserException("Reset token has expired", HttpStatus.BAD_REQUEST);
         }
 
-        userService.updateResetToken(user, data.password());
+        publisher.publishEvent(new ResetPasswordObserver(user, data.password()));
 
         return ResponseEntity.ok("Password reset successfully");
     }

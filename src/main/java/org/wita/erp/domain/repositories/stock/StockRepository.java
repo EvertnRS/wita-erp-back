@@ -12,4 +12,10 @@ public interface StockRepository extends JpaRepository<StockMovement, UUID> {
     @Query("SELECT s FROM StockMovement s WHERE " +
             "(LOWER(s.product.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     Page<StockMovement> findBySearchTerm(String searchTerm, Pageable pageable);
+
+    StockMovement findByTransactionIdAndProductId(
+            UUID transaction,
+            UUID product
+    );
+
 }

@@ -1,6 +1,9 @@
 package org.wita.erp.services.product;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -11,11 +14,15 @@ import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.product.mappers.ProductMapper;
 import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.domain.entities.stock.StockMovementType;
 import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.domain.repositories.product.CategoryRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
+import org.wita.erp.services.stock.observers.StockMovementObserver;
+import org.wita.erp.services.stock.observers.UpdateStockMovementObserver;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -24,6 +31,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+    private final ApplicationEventPublisher publisher;
 
     public ResponseEntity<Page<Product>> getAllProducts(Pageable pageable, String searchTerm) {
         Page<Product> productPage;
@@ -45,16 +53,29 @@ public class ProductService {
             throw new ProductException("Product already exists", HttpStatus.CONFLICT);
         }
 
-        Product product = new Product();
-        product.setName(data.name());
-        product.setPrice(data.price());
-        product.setMinQuantity(data.minQuantity());
-        product.setQuantityInStock(data.quantityInStock());
-        product.setCategory(category);
+        Product product = getProduct(data, category);
 
         productRepository.save(product);
 
         return ResponseEntity.ok(product);
+    }
+
+    private Product getProduct(CreateProductRequestDTO data, Category category) {
+        Product product = new Product();
+        product.setName(data.name());
+        product.setPrice(data.price());
+        product.setDiscount(data.discount());
+
+        if (data.discount().compareTo(BigDecimal.ZERO) > 0) {
+            product.setMinQuantityForDiscount(data.minQuantityForDiscount());
+        } else {
+            product.setMinQuantityForDiscount(0);
+        }
+
+        product.setMinQuantity(data.minQuantity());
+        product.setQuantityInStock(data.quantityInStock());
+        product.setCategory(category);
+        return product;
     }
 
     public ResponseEntity<Product> update(UUID id, UpdateProductRequestDTO data) {
@@ -81,21 +102,37 @@ public class ProductService {
         return ResponseEntity.ok(product);
     }
 
-    public ResponseEntity<Product> addProductInStock(UUID id, Integer quantity) {
-        Product product = productRepository.findById(id)
+    @Transactional
+    @EventListener
+    public void onStockMovement(StockMovementObserver event) {
+        Product product = productRepository.findById(event.product())
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
 
-        product.setQuantityInStock(product.getQuantityInStock() + quantity);
-        productRepository.save(product);
-        return ResponseEntity.ok(product);
+        if (event.stockMovementType() == StockMovementType.IN) {
+            product.setQuantityInStock(product.getQuantityInStock() + event.quantity());
+            productRepository.save(product);
+        }
+
+        else if (event.stockMovementType() == StockMovementType.OUT) {
+            product.setQuantityInStock(product.getQuantityInStock() - event.quantity());
+            productRepository.save(product);
+        }
     }
 
-    public ResponseEntity<Product> removeProductFromStock(UUID id, Integer quantity) {
-        Product product = productRepository.findById(id)
+    @Transactional
+    @EventListener
+    public void onUpdateStockMovement(UpdateStockMovementObserver event) {
+        Product product = productRepository.findById(event.product())
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
 
-        product.setQuantityInStock(product.getQuantityInStock() - quantity);
+        int adjustedQuantity = event.newQuantity() - product.getQuantityInStock();
+
+        if (adjustedQuantity > 0) {
+            product.setQuantityInStock(product.getQuantityInStock() + adjustedQuantity);
+        } else if (adjustedQuantity < 0) {
+            product.setQuantityInStock(product.getQuantityInStock() + adjustedQuantity);
+        }
+
         productRepository.save(product);
-        return ResponseEntity.ok(product);
     }
 }

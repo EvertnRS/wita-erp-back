@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.wita.erp.domain.entities.transaction.Transaction;
+import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.user.User;
 
 import java.time.LocalDateTime;
@@ -34,6 +37,10 @@ public class StockMovement {
     @OneToOne
     @JoinColumn(name = "movement_reason_id", nullable = false)
     private MovementReason movementReason;
+
+    @ManyToOne
+    @JoinColumn(name = "transaction_id")
+    private Transaction transaction;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
