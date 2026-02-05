@@ -205,6 +205,9 @@ public class PurchaseService {
     }
 
     private PurchaseItem createPurchaseItem(Product product, int quantity) {
+        if ((product.getQuantityInStock() - quantity) <= product.getMinQuantity()){
+            throw new ProductException("Not enough stock for product: " + product.getName(), HttpStatus.BAD_REQUEST);
+        }
         PurchaseItem purchaseItem = new PurchaseItem();
         purchaseItem.setProduct(product);
         purchaseItem.setQuantity(quantity);
