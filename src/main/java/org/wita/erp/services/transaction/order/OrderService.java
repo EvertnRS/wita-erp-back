@@ -11,20 +11,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.customer.Customer;
+import org.wita.erp.domain.entities.payment.PaymentType;
+import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
+import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.domain.entities.stock.MovementReason;
+import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.OrderItem;
 import org.wita.erp.domain.entities.transaction.order.dtos.CreateOrderRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.OrderDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.ProductOrderRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateOrderRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.mappers.OrderMapper;
-import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
-import org.wita.erp.domain.entities.payment.PaymentType;
-import org.wita.erp.domain.entities.transaction.order.Order;
-import org.wita.erp.domain.entities.product.Product;
-import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
-import org.wita.erp.domain.repositories.transaction.TransactionRepository;
 import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
@@ -36,8 +35,9 @@ import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
-import org.wita.erp.services.transaction.order.observers.CreateOrderObserver;
 import org.wita.erp.services.stock.observers.StockCompensationOrderObserver;
+import org.wita.erp.services.transaction.order.observers.CreateOrderObserver;
+import org.wita.erp.services.transaction.order.observers.UpdateOrderObserver;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -106,7 +106,6 @@ public class OrderService {
 
             OrderItem orderItem = createOrderItem(product, itemData.quantity());
             BigDecimal itemDiscount = product.calculateItemDiscount(orderItem.getUnitPrice(), itemData.quantity());
-
             orderItem.calculateTotal(itemDiscount);
             order.addItem(orderItem);
         }
@@ -126,6 +125,10 @@ public class OrderService {
     public ResponseEntity<OrderDTO> update(UUID id, UpdateOrderRequestDTO data) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
 
         if (data.customer() != null) {
             order.setCustomer(customerRepository.findById(data.customer())
@@ -153,18 +156,27 @@ public class OrderService {
             order.setTransactionCode(data.transactionCode());
         }
 
-        /*if (data.products() != null) {
-            MovementReason reason = findSaleReason();
-            UUID sellerId = data.seller() != null ? data.seller() : order.getSeller().getId();
+        if (!data.products().isEmpty()) {
+            order.removeItens();
 
             for (ProductOrderRequestDTO itemData : data.products()) {
-                updateOrderItem(order, itemData, reason, sellerId);
+                Product product = productRepository.findById(itemData.product())
+                        .orElseThrow(() -> new ProductException("Product " + itemData.product() + " not found", HttpStatus.NOT_FOUND));
+
+                OrderItem orderItem = createOrderItem(product, itemData.quantity());
+                BigDecimal itemDiscount = product.calculateItemDiscount(orderItem.getUnitPrice(), itemData.quantity());
+                orderItem.calculateTotal(itemDiscount);
+                order.addItem(orderItem);
             }
-        }*/
 
-        BigDecimal discount = data.discount() != null ? data.discount() : (order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO);
-        applyDiscountAndCalculateTotal(order, discount);
+            order.applyOrderDiscount();
 
+            orderRepository.save(order);
+
+            publisher.publishEvent(new UpdateOrderObserver(order.getId(), movementReason.getId()));
+        }
+
+        orderMapper.updateOrderFromDTO(data, order);
         orderRepository.save(order);
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
@@ -173,15 +185,19 @@ public class OrderService {
     public ResponseEntity<OrderDTO> addProductInOrder(UUID orderId, ProductOrderRequestDTO data) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
         Product product = productRepository.findById(data.product())
                 .orElseThrow(() -> new ProductException("Product " + data.product() + " not found", HttpStatus.NOT_FOUND));
 
         OrderItem orderItem = createOrderItem(product, data.quantity());
+        BigDecimal itemDiscount = product.calculateItemDiscount(orderItem.getUnitPrice(), data.quantity());
+        orderItem.calculateTotal(itemDiscount);
         order.addItem(orderItem);
 
-        applyDiscountAndCalculateTotal(order, order.getDiscount());
+        order.applyOrderDiscount();
 
         orderRepository.save(order);
+
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
 
@@ -202,23 +218,7 @@ public class OrderService {
         orderItem.setProduct(product);
         orderItem.setQuantity(quantity);
         orderItem.setUnitPrice(product.getPrice());
-        orderItem.setTotal(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
         return orderItem;
-    }
-
-    private void applyDiscountAndCalculateTotal(Order order, BigDecimal discount) {
-        BigDecimal subTotal = order.getItems().stream()
-                .map(OrderItem::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal safeDiscount = discount != null ? discount : BigDecimal.ZERO;
-
-        if (safeDiscount.compareTo(subTotal) > 0) {
-            throw new OrderException("Discount amount greater than order total", HttpStatus.BAD_REQUEST);
-        }
-
-        order.setDiscount(safeDiscount);
-        order.setValue(subTotal.subtract(safeDiscount));
     }
 
     @EventListener

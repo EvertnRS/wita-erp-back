@@ -10,7 +10,9 @@ import lombok.Setter;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.user.User;
+
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,14 +56,21 @@ public class Order extends Transaction {
                 .map(OrderItem::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (discount == null || discount.compareTo(BigDecimal.ZERO) <= 0) {
             this.value = subTotal;
             return;
         }
 
         BigDecimal orderDiscount =
-                subTotal.multiply(discount);
+                subTotal
+                        .multiply(discount)
+                        .divide(
+                                BigDecimal.valueOf(100),
+                                2,
+                                RoundingMode.HALF_UP
+                        );
 
         this.value = subTotal.subtract(orderDiscount);
     }
+
 }

@@ -5,10 +5,14 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -62,7 +66,7 @@ public class Product {
             int quantity
     ) {
 
-        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (discount == null || discount.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
 
@@ -73,7 +77,14 @@ public class Product {
         BigDecimal gross =
                 unitPrice.multiply(BigDecimal.valueOf(quantity));
 
-        return gross.multiply(discount);
+        return gross
+                .multiply(discount)
+                .divide(
+                        BigDecimal.valueOf(100),
+                        2,
+                        RoundingMode.HALF_UP
+                );
     }
+
 
 }

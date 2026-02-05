@@ -21,6 +21,8 @@ public interface OrderMapper {
     @Mapping(target = "paymentType", ignore = true)
     @Mapping(target = "transactionCode", ignore = true)
     @Mapping(target = "items", ignore = true)
+    @Mapping(target = "value", ignore = true)
+    @Mapping(target = "discount", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateOrderFromDTO(UpdateOrderRequestDTO dto, @MappingTarget Order purchase);
 

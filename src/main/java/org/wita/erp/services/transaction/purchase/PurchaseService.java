@@ -10,9 +10,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.PaymentType;
+import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.domain.entities.stock.MovementReason;
+import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.transaction.purchase.PurchaseItem;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.CreatePurchaseRequestDTO;
@@ -20,14 +22,12 @@ import org.wita.erp.domain.entities.transaction.purchase.dtos.ProductPurchaseReq
 import org.wita.erp.domain.entities.transaction.purchase.dtos.PurchaseDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePurchaseRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.mappers.PurchaseMapper;
-import org.wita.erp.domain.entities.stock.MovementReason;
-import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
-import org.wita.erp.domain.repositories.transaction.purchase.PurchaseRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.supplier.SupplierRepository;
+import org.wita.erp.domain.repositories.transaction.purchase.PurchaseRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
@@ -35,9 +35,9 @@ import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
 import org.wita.erp.infra.exceptions.user.UserException;
+import org.wita.erp.services.stock.observers.StockCompensationPurchaseObserver;
 import org.wita.erp.services.transaction.purchase.observers.CreatePurchaseObserver;
 import org.wita.erp.services.transaction.purchase.observers.UpdatePurchaseObserver;
-import org.wita.erp.services.stock.observers.StockCompensationPurchaseObserver;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -167,6 +167,7 @@ public class PurchaseService {
                 purchase.addItem(purchaseItem);
             }
 
+            purchaseMapper.updatePurchaseFromDTO(data, purchase);
             purchaseRepository.save(purchase);
 
             publisher.publishEvent(
@@ -175,9 +176,9 @@ public class PurchaseService {
         }
 
         else{
+            purchaseMapper.updatePurchaseFromDTO(data, purchase);
             purchaseRepository.save(purchase);
         }
-
 
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
