@@ -2,6 +2,7 @@ package org.wita.erp.services.stock;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.sql.Update;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.order.Order;
@@ -34,6 +36,7 @@ import org.wita.erp.infra.exceptions.stock.StockException;
 import org.wita.erp.domain.repositories.stock.StockRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.order.CreateOrderObserver;
+import org.wita.erp.services.order.UpdateOrderObserver;
 import org.wita.erp.services.purchase.CreatePurchaseObserver;
 
 import java.util.UUID;
@@ -64,6 +67,7 @@ public class StockService {
 
     @Transactional
     public ResponseEntity<StockMovement> save(CreateStockRequestDTO data) {
+        System.out.println(">>> 3. Save ACIONADO para produto..." + data.product());
         Product product = productRepository.findById(data.product())
                 .orElseThrow(() -> new ProductException("Product not registered in the system", HttpStatus.NOT_FOUND));
 
@@ -73,11 +77,13 @@ public class StockService {
         User user = userRepository.findById(data.user())
                 .orElseThrow(() -> new UserException("User not registered in the system", HttpStatus.NOT_FOUND));
 
-        if(data.stockMovementType() == StockMovementType.IN) {
+        if (data.stockMovementType() == StockMovementType.IN) {
             publisher.publishEvent(new StockMovementObserver(StockMovementType.IN, product.getId(), data.quantity()));
         } else if (data.stockMovementType() == StockMovementType.OUT) {
             publisher.publishEvent(new StockMovementObserver(StockMovementType.OUT, product.getId(), data.quantity()));
         }
+
+        System.out.println(">>> 6. Criando objeto de Movimentação de Estoque...");
 
         StockMovement stock = new StockMovement();
         stock.setProduct(product);
@@ -86,8 +92,13 @@ public class StockService {
         stock.setMovementReason(movementReason);
         stock.setUser(user);
 
+        System.out.println(">>> 7. Salvando Movimentação de Estoque...");
+
         stockRepository.save(stock);
 
+        stockRepository.flush();
+
+        System.out.println(">>> 8. Salvo " + stock.getId());
         return ResponseEntity.ok(stock);
     }
 
@@ -131,7 +142,7 @@ public class StockService {
     @Transactional
     @Async
     public void onOrderCreated(CreateOrderObserver event) {
-        try{
+        try {
             Order order = orderRepository.findById(event.order())
                     .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
@@ -153,7 +164,7 @@ public class StockService {
     @Transactional
     @Async
     public void onPurchaseCreated(CreatePurchaseObserver event) {
-        try{
+        try {
             Purchase purchase = purchaseRepository.findById(event.purchase())
                     .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
@@ -167,6 +178,37 @@ public class StockService {
 
         } catch (Exception e) {
             publisher.publishEvent(new StockCompensationPurchaseObserver(event.purchase()));
+            throw new StockException("Failed to process stock movements for order: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @Transactional
+    public void onOrderUpdated(UpdateOrderObserver event) {
+        System.out.println(">>> 1. Listener onOrderUpdated ACIONADO para pedido: " + event.order());
+        try {
+            Order order = orderRepository.findById(event.order())
+                    .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+            MovementReason movementReason = movementReasonRepository.findById(event.movementReason())
+                    .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+            event.changes().forEach(changes -> {
+                StockMovementType type = changes.quantityDifference() > 0 ? StockMovementType.IN : StockMovementType.OUT;
+
+                System.out.println(">>> 2. Criando dto de movimentação de estoque...");
+
+                CreateStockRequestDTO dto = new CreateStockRequestDTO(
+                        changes.productId(),
+                        type,
+                        Math.abs(changes.quantityDifference()),
+                        movementReason.getId(),
+                        order.getSeller().getId());
+
+                this.save(dto);
+            });
+        } catch (Exception e) {
+            publisher.publishEvent(new StockCompensationOrderObserver(event.order()));
             throw new StockException("Failed to process stock movements for order: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

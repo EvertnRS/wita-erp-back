@@ -9,10 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.order.Order;
-import org.wita.erp.domain.entities.order.dtos.CreateOrderRequestDTO;
-import org.wita.erp.domain.entities.order.dtos.OrderDTO;
-import org.wita.erp.domain.entities.order.dtos.ProductOrderRequestDTO;
-import org.wita.erp.domain.entities.order.dtos.UpdateOrderRequestDTO;
+import org.wita.erp.domain.entities.order.dtos.*;
 import org.wita.erp.services.order.OrderService;
 
 import java.util.UUID;
@@ -37,7 +34,7 @@ public class OrderController {
 
     @PostMapping("/add-item/{orderId}")
     @PreAuthorize("hasAuthority('ORDER_UPDATE')")
-    public ResponseEntity<OrderDTO> addProductInOrder(@PathVariable UUID orderId, @RequestBody @Valid ProductOrderRequestDTO data) {
+    public ResponseEntity<OrderDTO> addProductInOrder(@PathVariable UUID orderId, @RequestBody @Valid AddProductInOrderDTO data) {
         return orderService.addProductInOrder(orderId, data);
     }
 

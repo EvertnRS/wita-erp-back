@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "order")
+@Table(name = "orders")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,7 +33,7 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.AUTO) @Id
     private UUID id;
 
-    @Positive
+    @PositiveOrZero
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal value;
 

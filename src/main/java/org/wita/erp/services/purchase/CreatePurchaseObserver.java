@@ -5,8 +5,8 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-@Getter
-@Setter
+/*@Getter
+@Setter*/
 public record CreatePurchaseObserver(UUID purchase, UUID movementReason) {
 }
 

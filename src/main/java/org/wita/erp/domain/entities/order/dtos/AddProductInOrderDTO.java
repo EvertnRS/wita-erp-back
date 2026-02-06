@@ -4,8 +4,8 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-public record ProductOrderRequestDTO(
-        @NotNull UUID productId,
-        @NotNull Integer quantity
+public record AddProductInOrderDTO(
+        @NotNull ProductOrderRequestDTO product,
+        @NotNull UUID movementReason
         ) {
 }

@@ -106,15 +106,18 @@ public class ProductService {
     @Transactional
     @EventListener
     public void onStockMovement(StockMovementObserver event) {
+
+        System.out.println(">>> 4. Listener onStockMovement ACIONADO para produto..." + event.product());
         Product product = productRepository.findById(event.product())
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
 
         if (event.stockMovementType() == StockMovementType.IN) {
+            System.out.println(">>> 5. Entrada de estoque..." + event.quantity());
+
             product.setQuantityInStock(product.getQuantityInStock() + event.quantity());
             productRepository.save(product);
-        }
-
-        else if (event.stockMovementType() == StockMovementType.OUT) {
+        } else if (event.stockMovementType() == StockMovementType.OUT) {
+            System.out.println(">>> 5. Saida de estoque..." + event.quantity());
             product.setQuantityInStock(product.getQuantityInStock() - event.quantity());
             productRepository.save(product);
         }

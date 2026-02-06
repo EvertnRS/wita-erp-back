@@ -6,8 +6,8 @@ import org.wita.erp.domain.entities.stock.StockMovementType;
 
 import java.util.UUID;
 
-@Getter
-@Setter
+/*@Getter
+@Setter*/
 public record StockMovementObserver(StockMovementType stockMovementType, UUID product, int quantity) {
 }
 
