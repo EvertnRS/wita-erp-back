@@ -17,10 +17,7 @@ import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.OrderItem;
-import org.wita.erp.domain.entities.transaction.order.dtos.CreateOrderRequestDTO;
-import org.wita.erp.domain.entities.transaction.order.dtos.OrderDTO;
-import org.wita.erp.domain.entities.transaction.order.dtos.ProductOrderRequestDTO;
-import org.wita.erp.domain.entities.transaction.order.dtos.UpdateOrderRequestDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.*;
 import org.wita.erp.domain.entities.transaction.order.mappers.OrderMapper;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
@@ -36,10 +33,13 @@ import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.stock.observers.StockCompensationOrderObserver;
+import org.wita.erp.services.transaction.order.observers.AddProductInOrderObserver;
 import org.wita.erp.services.transaction.order.observers.CreateOrderObserver;
+import org.wita.erp.services.transaction.order.observers.RemoveProductInOrderObserver;
 import org.wita.erp.services.transaction.order.observers.UpdateOrderObserver;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -87,7 +87,7 @@ public class OrderService {
         MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
                 .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
-        long uniqueIds = data.products().stream().map(ProductOrderRequestDTO::product).distinct().count();
+        long uniqueIds = data.products().stream().map(ProductOrderRequestDTO::productId).distinct().count();
         if (uniqueIds != data.products().size()) {
             throw new OrderException("Duplicate products found. Combine quantities.", HttpStatus.BAD_REQUEST);
         }
@@ -101,8 +101,8 @@ public class OrderService {
         order.setPaymentType(paymentType);
 
         for (ProductOrderRequestDTO itemData : data.products()) {
-            Product product = productRepository.findById(itemData.product())
-                    .orElseThrow(() -> new ProductException("Product " + itemData.product() + " not found", HttpStatus.NOT_FOUND));
+            Product product = productRepository.findById(itemData.productId())
+                    .orElseThrow(() -> new ProductException("Product " + itemData.productId() + " not found", HttpStatus.NOT_FOUND));
 
             OrderItem orderItem = createOrderItem(product, itemData.quantity());
             BigDecimal itemDiscount = product.calculateItemDiscount(orderItem.getUnitPrice(), itemData.quantity());
@@ -121,13 +121,9 @@ public class OrderService {
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
 
-    @Transactional
     public ResponseEntity<OrderDTO> update(UUID id, UpdateOrderRequestDTO data) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
-
-        MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
-                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
 
         if (data.customer() != null) {
@@ -156,24 +152,9 @@ public class OrderService {
             order.setTransactionCode(data.transactionCode());
         }
 
-        if (!data.products().isEmpty()) {
-            order.removeItens();
-
-            for (ProductOrderRequestDTO itemData : data.products()) {
-                Product product = productRepository.findById(itemData.product())
-                        .orElseThrow(() -> new ProductException("Product " + itemData.product() + " not found", HttpStatus.NOT_FOUND));
-
-                OrderItem orderItem = createOrderItem(product, itemData.quantity());
-                BigDecimal itemDiscount = product.calculateItemDiscount(orderItem.getUnitPrice(), itemData.quantity());
-                orderItem.calculateTotal(itemDiscount);
-                order.addItem(orderItem);
-            }
-
+        if (data.discount() != null) {
+            order.setDiscount(data.discount());
             order.applyOrderDiscount();
-
-            orderRepository.save(order);
-
-            publisher.publishEvent(new UpdateOrderObserver(order.getId(), movementReason.getId()));
         }
 
         orderMapper.updateOrderFromDTO(data, order);
@@ -181,25 +162,86 @@ public class OrderService {
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
 
-    /*@Transactional
-    public ResponseEntity<OrderDTO> addProductInOrder(UUID orderId, ProductOrderRequestDTO data) {
+    @Transactional
+    public ResponseEntity<OrderDTO> addProductInOrder(UUID orderId, ProductInOrderDTO data) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
-        Product product = productRepository.findById(data.product())
-                .orElseThrow(() -> new ProductException("Product " + data.product() + " not found", HttpStatus.NOT_FOUND));
+        Product product = productRepository.findById(data.product().productId())
+                .orElseThrow(() -> new ProductException("Product " + data.product().productId() + " not found", HttpStatus.NOT_FOUND));
 
-        OrderItem orderItem = createOrderItem(product, data.quantity());
-        BigDecimal itemDiscount = product.calculateItemDiscount(orderItem.getUnitPrice(), data.quantity());
-        orderItem.calculateTotal(itemDiscount);
-        order.addItem(orderItem);
+        MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+        OrderItem currentItem;
+
+        Optional<OrderItem> existingItemOpt = order.getItems().stream()
+                .filter(item -> item.getProduct().getId().equals(data.product().productId()))
+                .findFirst();
+
+        if (existingItemOpt.isPresent()) {
+            currentItem = existingItemOpt.get();
+
+            int updatedQuantity = currentItem.getQuantity() + data.product().quantity();
+            currentItem.setQuantity(updatedQuantity);
+        } else {
+            currentItem = createOrderItem(product, data.product().quantity());
+            order.addItem(currentItem);
+        }
+
+        BigDecimal itemDiscount = product.calculateItemDiscount(currentItem.getUnitPrice(), currentItem.getQuantity());
+        currentItem.calculateTotal(itemDiscount);
 
         order.applyOrderDiscount();
+
+        publisher.publishEvent(new AddProductInOrderObserver(order.getId(), movementReason.getId(), data.product()));
 
         orderRepository.save(order);
 
         return ResponseEntity.ok(orderMapper.toDTO(order));
-    }*/
+    }
+
+    @Transactional
+    public ResponseEntity<OrderDTO> removeProductInOrder(UUID orderId, ProductInOrderDTO data) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        Product product = productRepository.findById(data.product().productId())
+                .orElseThrow(() -> new ProductException("Product " + data.product().productId() + " not found", HttpStatus.NOT_FOUND));
+
+        MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+        OrderItem currentItem = order.getItems().stream()
+                .filter(item -> item.getProduct().getId().equals(data.product().productId()))
+                .findFirst()
+                .orElseThrow(() -> new OrderException("Product not found in this order", HttpStatus.NOT_FOUND));
+
+        if (currentItem.getQuantity() < data.product().quantity()) {
+            throw new OrderException("Quantity requested for removal exceeds the available quantity.", HttpStatus.BAD_REQUEST);
+        }
+
+        else if (currentItem.getQuantity().equals(data.product().quantity())) {
+            order.getItems().remove(currentItem);
+        } else {
+            int newQuantity = currentItem.getQuantity() - data.product().quantity();
+            currentItem.setQuantity(newQuantity);
+
+            BigDecimal itemDiscount = product.calculateItemDiscount(currentItem.getUnitPrice(), currentItem.getQuantity());
+            currentItem.calculateTotal(itemDiscount);
+        }
+
+        BigDecimal itemDiscount = product.calculateItemDiscount(currentItem.getUnitPrice(), currentItem.getQuantity());
+        currentItem.calculateTotal(itemDiscount);
+
+        order.applyOrderDiscount();
+
+        publisher.publishEvent(new RemoveProductInOrderObserver(order.getId(), movementReason.getId(), data.product()));
+
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(orderMapper.toDTO(order));
+    }
 
     public ResponseEntity<OrderDTO> delete(UUID id) {
         Order order = orderRepository.findById(id)
