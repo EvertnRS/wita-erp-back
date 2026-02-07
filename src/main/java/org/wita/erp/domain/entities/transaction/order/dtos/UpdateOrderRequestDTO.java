@@ -9,8 +9,6 @@ public record UpdateOrderRequestDTO(BigDecimal value,
                                     UUID seller,
                                     UUID customer,
                                     UUID paymentType,
-                                    UUID movementReason,
                                     String transactionCode,
-                                    String description,
-                                    Set<ProductOrderRequestDTO> products) {
+                                    String description) {
 }

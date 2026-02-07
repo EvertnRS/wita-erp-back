@@ -8,10 +8,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.transaction.order.dtos.CreateOrderRequestDTO;
-import org.wita.erp.domain.entities.transaction.order.dtos.OrderDTO;
-import org.wita.erp.domain.entities.transaction.order.dtos.ProductOrderRequestDTO;
-import org.wita.erp.domain.entities.transaction.order.dtos.UpdateOrderRequestDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.*;
 import org.wita.erp.services.transaction.order.OrderService;
 
 import java.util.UUID;
@@ -34,11 +31,17 @@ public class OrderController {
         return orderService.save(data);
     }
 
-    /*@PostMapping("/add-item/{orderId}")
+    @PostMapping("/add-item/{orderId}")
     @PreAuthorize("hasAuthority('ORDER_UPDATE')")
-    public ResponseEntity<OrderDTO> addProductInOrder(@PathVariable UUID orderId, @RequestBody @Valid ProductOrderRequestDTO data) {
+    public ResponseEntity<OrderDTO> addProductInOrder(@PathVariable UUID orderId, @RequestBody @Valid ProductInOrderDTO data) {
         return orderService.addProductInOrder(orderId, data);
-    }*/
+    }
+
+    @PostMapping("/remove-item/{orderId}")
+    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
+    public ResponseEntity<OrderDTO> removeProductInOrder(@PathVariable UUID orderId, @RequestBody @Valid ProductInOrderDTO data) {
+        return orderService.removeProductInOrder(orderId, data);
+    }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ORDER_UPDATE')")

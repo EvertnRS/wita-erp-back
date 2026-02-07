@@ -114,6 +114,9 @@ public class ProductService {
         }
 
         else if (event.stockMovementType() == StockMovementType.OUT) {
+            if(product.getQuantityInStock() < event.quantity()) {
+                throw new ProductException("Product quantity out of stock", HttpStatus.CONFLICT);
+            }
             product.setQuantityInStock(product.getQuantityInStock() - event.quantity());
             productRepository.save(product);
         }

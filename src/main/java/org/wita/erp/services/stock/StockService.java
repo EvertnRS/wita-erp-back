@@ -16,10 +16,12 @@ import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.StockMovement;
 import org.wita.erp.domain.entities.stock.StockMovementType;
 import org.wita.erp.domain.entities.stock.dtos.CreateStockRequestDTO;
+import org.wita.erp.domain.entities.stock.dtos.StockMovementDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateStockRequestDTO;
 import org.wita.erp.domain.entities.stock.mappers.StockMapper;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.order.Order;
+import org.wita.erp.domain.entities.transaction.order.dtos.ProductInOrderDTO;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.product.ProductRepository;
@@ -40,7 +42,9 @@ import org.wita.erp.services.stock.observers.StockCompensationOrderObserver;
 import org.wita.erp.services.stock.observers.StockCompensationPurchaseObserver;
 import org.wita.erp.services.stock.observers.StockMovementObserver;
 import org.wita.erp.services.stock.observers.UpdateStockMovementObserver;
+import org.wita.erp.services.transaction.order.observers.AddProductInOrderObserver;
 import org.wita.erp.services.transaction.order.observers.CreateOrderObserver;
+import org.wita.erp.services.transaction.order.observers.RemoveProductInOrderObserver;
 import org.wita.erp.services.transaction.order.observers.UpdateOrderObserver;
 import org.wita.erp.services.transaction.purchase.observers.CreatePurchaseObserver;
 import org.wita.erp.services.transaction.purchase.observers.UpdatePurchaseObserver;
@@ -60,7 +64,7 @@ public class StockService {
     private final PurchaseRepository purchaseRepository;
     private final ApplicationEventPublisher publisher;
 
-    public ResponseEntity<Page<StockMovement>> getAllStock(Pageable pageable, String searchTerm) {
+    public ResponseEntity<Page<StockMovementDTO>> getAllStock(Pageable pageable, String searchTerm) {
         Page<StockMovement> stockPage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -69,11 +73,13 @@ public class StockService {
             stockPage = stockRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(stockPage);
+        Page<StockMovementDTO> dto = stockPage.map(stockMapper::StockMovementToDTO);
+
+        return ResponseEntity.ok(dto);
     }
 
     @Transactional
-    public ResponseEntity<StockMovement> save(CreateStockRequestDTO data) {
+    public ResponseEntity<StockMovementDTO> save(CreateStockRequestDTO data) {
         Product product = productRepository.findById(data.product())
                 .orElseThrow(() -> new ProductException("Product not registered in the system", HttpStatus.NOT_FOUND));
 
@@ -87,19 +93,13 @@ public class StockService {
                 .orElseThrow(() -> new TransactionException("Transaction not registered in the system", HttpStatus.NOT_FOUND));
 
         StockMovement stock = new StockMovement();
-        if (transaction instanceof Order) {
-            Order order = orderRepository.findById(data.transaction())
-                    .orElseThrow(() -> new OrderException("Order not registered in the system", HttpStatus.NOT_FOUND));
+        stock.setStockMovementType(data.movementType());
 
-            stock.setStockMovementType(StockMovementType.OUT);
+        if (transaction instanceof Order order) {
             stock.setTransaction(order);
         }
 
-        if (transaction instanceof Purchase){
-            Purchase purchase = purchaseRepository.findById(data.transaction())
-                    .orElseThrow(() -> new PurchaseException("Purchase not registered in the system", HttpStatus.NOT_FOUND));
-
-            stock.setStockMovementType(StockMovementType.OUT);
+        if (transaction instanceof Purchase purchase){
             stock.setTransaction(purchase);
         }
 
@@ -112,10 +112,10 @@ public class StockService {
 
         stockRepository.save(stock);
 
-        return ResponseEntity.ok(stock);
+        return ResponseEntity.ok(stockMapper.StockMovementToDTO(stock));
     }
 
-    public ResponseEntity<StockMovement> update(UUID id, UpdateStockRequestDTO data) {
+    public ResponseEntity<StockMovementDTO> update(UUID id, UpdateStockRequestDTO data) {
         StockMovement stock = stockRepository.findById(id)
                 .orElseThrow(() -> new StockException("Stock not found", HttpStatus.NOT_FOUND));
 
@@ -143,7 +143,7 @@ public class StockService {
                 Purchase purchase = purchaseRepository.findById(data.transaction())
                         .orElseThrow(() -> new PurchaseException("Purchase not registered in the system", HttpStatus.NOT_FOUND));
 
-                stock.setStockMovementType(StockMovementType.OUT);
+                stock.setStockMovementType(StockMovementType.IN);
                 stock.setTransaction(purchase);
             }
         }
@@ -165,15 +165,15 @@ public class StockService {
         stockMapper.updateStockFromDTO(data, stock);
         stockRepository.save(stock);
 
-        return ResponseEntity.ok(stock);
+        return ResponseEntity.ok(stockMapper.StockMovementToDTO(stock));
     }
 
-    public ResponseEntity<StockMovement> delete(UUID id) {
+    public ResponseEntity<StockMovementDTO> delete(UUID id) {
         StockMovement stock = stockRepository.findById(id)
                 .orElseThrow(() -> new StockException("Stock not found", HttpStatus.NOT_FOUND));
         stock.setActive(false);
         stockRepository.save(stock);
-        return ResponseEntity.ok(stock);
+        return ResponseEntity.ok(stockMapper.StockMovementToDTO(stock));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -188,7 +188,7 @@ public class StockService {
                     .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
             order.getItems().forEach(orderItem -> {
-                CreateStockRequestDTO dto = new CreateStockRequestDTO(orderItem.getProduct().getId(), orderItem.getQuantity(), movementReason.getId(), order.getId(), order.getSeller().getId());
+                CreateStockRequestDTO dto = new CreateStockRequestDTO(orderItem.getProduct().getId(), orderItem.getQuantity(), movementReason.getId(), order.getId(), order.getSeller().getId(), StockMovementType.OUT);
                 this.save(dto);
             });
 
@@ -210,7 +210,7 @@ public class StockService {
                     .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
             purchase.getItems().forEach(purchaseItem -> {
-                CreateStockRequestDTO dto = new CreateStockRequestDTO(purchaseItem.getProduct().getId(), purchaseItem.getQuantity(), movementReason.getId(), purchase.getId(), purchase.getBuyer().getId());
+                CreateStockRequestDTO dto = new CreateStockRequestDTO(purchaseItem.getProduct().getId(), purchaseItem.getQuantity(), movementReason.getId(), purchase.getId(), purchase.getBuyer().getId(), StockMovementType.IN);
                 this.save(dto);
             });
 
@@ -223,7 +223,6 @@ public class StockService {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional
     public void onOrderUpdated(UpdateOrderObserver event) {
-
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
@@ -252,5 +251,45 @@ public class StockService {
             UpdateStockRequestDTO dto = new UpdateStockRequestDTO(purchaseItem.getProduct().getId(), purchaseItem.getQuantity(), movementReason.getId(), purchase.getId(), purchase.getBuyer().getId());
             this.update(stockMovement.getId(), dto);
         });
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @Transactional
+    public void onAddItemInOrder(AddProductInOrderObserver event) {
+        Order order = orderRepository.findById(event.order())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        MovementReason movementReason = movementReasonRepository.findById(event.movementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+        CreateStockRequestDTO dto = new CreateStockRequestDTO(
+                event.stockDifference().productId(),
+                event.stockDifference().quantity(),
+                movementReason.getId(),
+                order.getId(),
+                order.getSeller().getId(),
+                StockMovementType.OUT);
+
+        this.save(dto);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @Transactional
+    public void onRemoveItemInOrder(RemoveProductInOrderObserver event) {
+        Order order = orderRepository.findById(event.order())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        MovementReason movementReason = movementReasonRepository.findById(event.movementReason())
+                .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+        CreateStockRequestDTO dto = new CreateStockRequestDTO(
+                event.stockDifference().productId(),
+                event.stockDifference().quantity(),
+                movementReason.getId(),
+                order.getId(),
+                order.getSeller().getId(),
+                StockMovementType.IN);
+
+        this.save(dto);
     }
 }
