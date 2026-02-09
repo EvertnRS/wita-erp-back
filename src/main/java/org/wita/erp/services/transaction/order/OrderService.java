@@ -81,7 +81,7 @@ public class OrderService {
         PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
         if (!(paymentType instanceof CustomerPaymentType)) {
-            throw new OrderException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
+            throw new OrderException("Invalid Payment Type for orders", HttpStatus.BAD_REQUEST);
         }
 
         MovementReason movementReason = movementReasonRepository.findById(data.movementReason())

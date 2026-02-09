@@ -2,6 +2,8 @@ package org.wita.erp.domain.entities.transaction.order;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,7 +17,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "receivables")
+@Table(name = "receivable")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,7 +29,7 @@ public class Receivable {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal value;
 
-    @Future
+    @FutureOrPresent
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
 
@@ -38,7 +40,9 @@ public class Receivable {
     @JoinColumn(name = "order_id")
     private Order order;
 
-    private String description;
+    @Min(1)
+    @Column(nullable = false, updatable = false)
+    private Integer installment;
 
     @Column(nullable = false)
     private Boolean active = true;
