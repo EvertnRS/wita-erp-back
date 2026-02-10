@@ -7,7 +7,6 @@ public record UpdateOrderRequestDTO(BigDecimal value,
                                     Integer installments,
                                     BigDecimal discount,
                                     UUID seller,
-                                    UUID customer,
                                     UUID paymentType,
                                     String transactionCode,
                                     String description) {

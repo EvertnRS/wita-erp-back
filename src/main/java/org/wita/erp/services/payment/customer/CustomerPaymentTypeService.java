@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
 import org.wita.erp.domain.entities.payment.customer.dto.CreateCustomerPaymentTypeRequestDTO;
@@ -13,6 +14,7 @@ import org.wita.erp.domain.entities.payment.customer.dto.UpdateCustomerPaymentTy
 import org.wita.erp.domain.entities.payment.customer.mappers.CustomerPaymentTypeMapper;
 import org.wita.erp.domain.entities.payment.dtos.CreatePaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.dtos.UpdatePaymentTypeRequestDTO;
+import org.wita.erp.domain.repositories.customer.CustomerRepository;
 import org.wita.erp.domain.repositories.payment.customer.CustomerPaymentTypeRepository;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.services.payment.PaymentTypeService;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class CustomerPaymentTypeService {
     private final CustomerPaymentTypeMapper customerPaymentTypeMapper;
     private final PaymentTypeService paymentTypeService;
+    private final CustomerRepository customerRepository;
     private final CustomerPaymentTypeRepository customerPaymentTypeRepository;
 
     public ResponseEntity<Page<CustomerPaymentType>> getAllCustomerPaymentTypes(Pageable pageable, String searchTerm) {
@@ -39,8 +42,12 @@ public class CustomerPaymentTypeService {
     }
 
     public ResponseEntity<PaymentType> save(CreateCustomerPaymentTypeRequestDTO data) {
+        Customer customer = customerRepository.findById(data.customer())
+                .orElseThrow(() -> new PaymentTypeException("Customer not found", HttpStatus.NOT_FOUND));
+
         CustomerPaymentType customerPaymentType = new CustomerPaymentType();
         customerPaymentType.setSupportsRefunds(data.supportsRefunds());
+        customerPaymentType.setCustomer(customer);
 
         ResponseEntity<PaymentType> response = paymentTypeService.save(customerPaymentType, new CreatePaymentTypeRequestDTO(
                 data.paymentMethod(),
@@ -54,6 +61,13 @@ public class CustomerPaymentTypeService {
     public ResponseEntity<PaymentType> update(UUID id, UpdateCustomerPaymentTypeRequestDTO data) {
         CustomerPaymentType customerPaymentType = customerPaymentTypeRepository.findById(id)
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
+
+        if(data.customer() != null){
+            Customer customer = customerRepository.findById(data.customer())
+                    .orElseThrow(() -> new PaymentTypeException("Customer not found", HttpStatus.NOT_FOUND));
+
+            customerPaymentType.setCustomer(customer);
+        }
 
         customerPaymentTypeMapper.updateCustomerPaymentTypeFromDTO(data, customerPaymentType);
 

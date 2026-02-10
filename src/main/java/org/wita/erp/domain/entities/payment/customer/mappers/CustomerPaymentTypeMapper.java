@@ -9,6 +9,7 @@ public interface CustomerPaymentTypeMapper {
     @Mapping(target = "paymentMethod", ignore = true)
     @Mapping(target = "isImmediate", ignore = true)
     @Mapping(target = "allowsInstallments", ignore = true)
+    @Mapping(target = "customer", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateCustomerPaymentTypeFromDTO(UpdateCustomerPaymentTypeRequestDTO dto, @MappingTarget CustomerPaymentType paymentType);
 

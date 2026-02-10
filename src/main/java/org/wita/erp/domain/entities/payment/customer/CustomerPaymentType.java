@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.payment.PaymentType;
 
 @Entity
@@ -17,4 +18,8 @@ import org.wita.erp.domain.entities.payment.PaymentType;
 public class CustomerPaymentType extends PaymentType {
     @Column(name = "supports_refunds", nullable = false)
     private Boolean supportsRefunds;
+
+    @ManyToOne
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
 }
