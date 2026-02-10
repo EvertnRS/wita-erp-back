@@ -5,6 +5,5 @@ import org.wita.erp.domain.entities.payment.PaymentMethod;
 
 public record CreatePaymentTypeRequestDTO(@NotNull PaymentMethod paymentMethod,
                                           @NotNull Boolean isImmediate,
-                                          @NotNull Boolean allowsInstallments,
-                                          Integer maxInstallments) {
+                                          @NotNull Boolean allowsInstallments) {
 }

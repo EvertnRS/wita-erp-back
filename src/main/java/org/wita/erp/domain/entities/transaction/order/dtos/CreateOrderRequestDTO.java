@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public record CreateOrderRequestDTO(@NotNull @Min(0) BigDecimal discount,
+                                    Integer installments,
                                     @NotNull UUID seller,
                                     @NotNull UUID customer,
                                     @NotNull UUID paymentType,

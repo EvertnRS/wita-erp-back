@@ -1,12 +1,9 @@
 package org.wita.erp.services.payment;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.payment.PaymentMethod;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.dtos.CreatePaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.dtos.UpdatePaymentTypeRequestDTO;
@@ -29,12 +26,6 @@ public class PaymentTypeService {
         } else {
             paymentType.setIsImmediate(false);
             paymentType.setAllowsInstallments(data.allowsInstallments());
-        }
-
-        if (!data.allowsInstallments()){
-            paymentType.setMaxInstallments(1);
-        } else{
-            paymentType.setMaxInstallments(data.maxInstallments());
         }
 
         paymentType.setPaymentMethod(data.paymentMethod());

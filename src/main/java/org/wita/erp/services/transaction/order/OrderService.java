@@ -33,10 +33,7 @@ import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.stock.observers.StockCompensationOrderObserver;
-import org.wita.erp.services.transaction.order.observers.AddProductInOrderObserver;
-import org.wita.erp.services.transaction.order.observers.CreateOrderObserver;
-import org.wita.erp.services.transaction.order.observers.RemoveProductInOrderObserver;
-import org.wita.erp.services.transaction.order.observers.UpdateOrderObserver;
+import org.wita.erp.services.transaction.order.observers.*;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -84,6 +81,10 @@ public class OrderService {
             throw new OrderException("Invalid Payment Type for orders", HttpStatus.BAD_REQUEST);
         }
 
+        if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && data.installments() != null){
+            throw new OrderException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
+        }
+
         MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
                 .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
 
@@ -99,6 +100,7 @@ public class OrderService {
         order.setSeller(seller);
         order.setTransactionCode(data.transactionCode());
         order.setPaymentType(paymentType);
+        order.setInstallments(data.installments());
 
         for (ProductOrderRequestDTO itemData : data.products()) {
             Product product = productRepository.findById(itemData.productId())
@@ -117,6 +119,12 @@ public class OrderService {
         publisher.publishEvent(
                 new CreateOrderObserver(order.getId(), movementReason.getId())
         );
+
+        if (data.installments() != null) {
+            publisher.publishEvent(
+                    new CreateReceivableOrderObserver(order.getId())
+            );
+        }
 
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
@@ -142,6 +150,11 @@ public class OrderService {
             if (!(paymentType instanceof CustomerPaymentType)) {
                 throw new OrderException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
             }
+            if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && order.getInstallments() != null){
+                throw new OrderException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
+
+            }
+
             order.setPaymentType(paymentType);
         }
 
@@ -158,6 +171,11 @@ public class OrderService {
         }
 
         orderMapper.updateOrderFromDTO(data, order);
+
+        if(order.getInstallments() != null){
+            publisher.publishEvent(new UpdateReceivableOrderObserver(order.getId()));
+        }
+
         orderRepository.save(order);
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
@@ -195,6 +213,10 @@ public class OrderService {
         order.applyOrderDiscount();
 
         publisher.publishEvent(new AddProductInOrderObserver(order.getId(), movementReason.getId(), data.product()));
+
+        if(order.getInstallments() != null){
+            publisher.publishEvent(new UpdateReceivableOrderObserver(order.getId()));
+        }
 
         orderRepository.save(order);
 
@@ -238,6 +260,10 @@ public class OrderService {
 
         publisher.publishEvent(new RemoveProductInOrderObserver(order.getId(), movementReason.getId(), data.product()));
 
+        if(order.getInstallments() != null){
+            publisher.publishEvent(new UpdateReceivableOrderObserver(order.getId()));
+        }
+
         orderRepository.save(order);
 
         return ResponseEntity.ok(orderMapper.toDTO(order));
@@ -266,6 +292,15 @@ public class OrderService {
     @EventListener
     @Async
     public void onStockCompensationOrder(StockCompensationOrderObserver event) {
+        orderRepository.findById(event.order())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        this.delete(event.order());
+    }
+
+    @EventListener
+    @Async
+    public void onReceivableCompensationOrder(ReceivableCompensationObserver event) {
         orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
