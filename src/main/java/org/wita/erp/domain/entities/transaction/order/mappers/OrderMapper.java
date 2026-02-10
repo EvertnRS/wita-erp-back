@@ -16,7 +16,6 @@ import org.wita.erp.domain.entities.user.mappers.UserMapper;
         PaymentTypeMapper.class
 })
 public interface OrderMapper {
-    @Mapping(target = "customer", ignore = true)
     @Mapping(target = "seller", ignore = true)
     @Mapping(target = "paymentType", ignore = true)
     @Mapping(target = "transactionCode", ignore = true)

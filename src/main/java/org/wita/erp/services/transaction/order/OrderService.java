@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
 import org.wita.erp.domain.entities.product.Product;
@@ -26,17 +25,13 @@ import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.transaction.order.OrderRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
-import org.wita.erp.infra.exceptions.customer.CustomerException;
 import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.stock.observers.StockCompensationOrderObserver;
-import org.wita.erp.services.transaction.order.observers.AddProductInOrderObserver;
-import org.wita.erp.services.transaction.order.observers.CreateOrderObserver;
-import org.wita.erp.services.transaction.order.observers.RemoveProductInOrderObserver;
-import org.wita.erp.services.transaction.order.observers.UpdateOrderObserver;
+import org.wita.erp.services.transaction.order.observers.*;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -72,16 +67,17 @@ public class OrderService {
             throw new OrderException("Transaction code already exists", HttpStatus.BAD_REQUEST);
         }
 
-        Customer customer = customerRepository.findById(data.customer())
-                .orElseThrow(() -> new CustomerException("Customer not registered", HttpStatus.NOT_FOUND));
-
         User seller = userRepository.findById(data.seller())
                 .orElseThrow(() -> new UserException("Seller not registered", HttpStatus.NOT_FOUND));
 
         PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
         if (!(paymentType instanceof CustomerPaymentType)) {
-            throw new OrderException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
+            throw new OrderException("Invalid Payment Type for orders", HttpStatus.BAD_REQUEST);
+        }
+
+        if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && data.installments() != null){
+            throw new OrderException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
         }
 
         MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
@@ -95,10 +91,10 @@ public class OrderService {
         Order order = new Order();
         order.setDescription(data.description());
         order.setDiscount(data.discount());
-        order.setCustomer(customer);
         order.setSeller(seller);
         order.setTransactionCode(data.transactionCode());
         order.setPaymentType(paymentType);
+        order.setInstallments(data.installments());
 
         for (ProductOrderRequestDTO itemData : data.products()) {
             Product product = productRepository.findById(itemData.productId())
@@ -118,18 +114,18 @@ public class OrderService {
                 new CreateOrderObserver(order.getId(), movementReason.getId())
         );
 
+        if (data.installments() != null) {
+            publisher.publishEvent(
+                    new CreateReceivableOrderObserver(order.getId())
+            );
+        }
+
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
 
     public ResponseEntity<OrderDTO> update(UUID id, UpdateOrderRequestDTO data) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
-
-
-        if (data.customer() != null) {
-            order.setCustomer(customerRepository.findById(data.customer())
-                    .orElseThrow(() -> new CustomerException("Customer not registered", HttpStatus.NOT_FOUND)));
-        }
 
         if (data.seller() != null) {
             order.setSeller(userRepository.findById(data.seller())
@@ -142,6 +138,11 @@ public class OrderService {
             if (!(paymentType instanceof CustomerPaymentType)) {
                 throw new OrderException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
             }
+            if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && order.getInstallments() != null){
+                throw new OrderException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
+
+            }
+
             order.setPaymentType(paymentType);
         }
 
@@ -158,6 +159,11 @@ public class OrderService {
         }
 
         orderMapper.updateOrderFromDTO(data, order);
+
+        if(order.getInstallments() != null){
+            publisher.publishEvent(new UpdateReceivableOrderObserver(order.getId()));
+        }
+
         orderRepository.save(order);
         return ResponseEntity.ok(orderMapper.toDTO(order));
     }
@@ -195,6 +201,10 @@ public class OrderService {
         order.applyOrderDiscount();
 
         publisher.publishEvent(new AddProductInOrderObserver(order.getId(), movementReason.getId(), data.product()));
+
+        if(order.getInstallments() != null){
+            publisher.publishEvent(new UpdateReceivableOrderObserver(order.getId()));
+        }
 
         orderRepository.save(order);
 
@@ -238,6 +248,10 @@ public class OrderService {
 
         publisher.publishEvent(new RemoveProductInOrderObserver(order.getId(), movementReason.getId(), data.product()));
 
+        if(order.getInstallments() != null){
+            publisher.publishEvent(new UpdateReceivableOrderObserver(order.getId()));
+        }
+
         orderRepository.save(order);
 
         return ResponseEntity.ok(orderMapper.toDTO(order));
@@ -266,6 +280,15 @@ public class OrderService {
     @EventListener
     @Async
     public void onStockCompensationOrder(StockCompensationOrderObserver event) {
+        orderRepository.findById(event.order())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        this.delete(event.order());
+    }
+
+    @EventListener
+    @Async
+    public void onReceivableCompensationOrder(ReceivableCompensationObserver event) {
         orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 

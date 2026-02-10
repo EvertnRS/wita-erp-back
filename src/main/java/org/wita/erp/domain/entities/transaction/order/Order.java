@@ -3,6 +3,8 @@ package org.wita.erp.domain.entities.transaction.order;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,6 +31,9 @@ public class Order extends Transaction {
     @DecimalMax("1.00")
     @Column(precision = 15, scale = 2, nullable = false)
     private BigDecimal discount;
+
+    @Min(1) @Max(48)
+    private Integer installments;
 
     @ManyToOne
     @JoinColumn(name = "seller_id", nullable = false)

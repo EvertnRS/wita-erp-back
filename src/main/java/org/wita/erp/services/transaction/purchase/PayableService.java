@@ -49,7 +49,7 @@ public class PayableService {
 
         List<Payable> payables = new java.util.ArrayList<>(List.of());
 
-        for (int i = 1; i <= purchase.getPaymentType().getMaxInstallments(); i++) {
+        for (int i = 1; i <= purchase.getInstallments(); i++) {
             Payable payable = new Payable();
             payable.setPurchase(purchase);
             payable.setPaymentStatus(data.paymentStatus());

@@ -6,14 +6,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.PaymentMethod;
 import org.wita.erp.domain.entities.payment.PaymentType;
+import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.company.dtos.CreateCompanyPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.company.dtos.UpdateCompanyPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.company.mappers.CompanyPaymentTypeMapper;
-import org.wita.erp.domain.entities.payment.dtos.*;
-import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
+import org.wita.erp.domain.entities.payment.dtos.CreatePaymentTypeRequestDTO;
+import org.wita.erp.domain.entities.payment.dtos.UpdatePaymentTypeRequestDTO;
 import org.wita.erp.domain.repositories.payment.company.CompanyPaymentTypeRepository;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.services.payment.PaymentTypeService;
@@ -45,8 +45,7 @@ public class CompanyPaymentTypeService {
         ResponseEntity<PaymentType> response = paymentTypeService.save(companyPaymentType, new CreatePaymentTypeRequestDTO(
                 data.paymentMethod(),
                 data.isImmediate(),
-                data.allowsInstallments(),
-                data.maxInstallments()
+                data.allowsInstallments()
         ));
 
         return ResponseEntity.ok(response.getBody());
@@ -75,8 +74,7 @@ public class CompanyPaymentTypeService {
         ResponseEntity<PaymentType> response = paymentTypeService.update(companyPaymentType, new UpdatePaymentTypeRequestDTO(
                 data.paymentMethod(),
                 data.isImmediate(),
-                data.allowsInstallments(),
-                data.maxInstallments()
+                data.allowsInstallments()
         ));
 
         return ResponseEntity.ok(response.getBody());

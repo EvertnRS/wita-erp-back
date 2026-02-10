@@ -1,7 +1,6 @@
 package org.wita.erp.domain.entities.payment;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,10 +29,6 @@ public class PaymentType {
 
     @Column(name = "allows_installments", nullable = false)
     private Boolean allowsInstallments;
-
-    @Min(1)
-    @Column(name = "max_installments", nullable = false)
-    private Integer maxInstallments;
 
     @Column(nullable = false)
     private Boolean active = true;
