@@ -4,7 +4,7 @@ import org.mapstruct.*;
 import org.wita.erp.domain.entities.customer.mappers.CustomerMapper;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.OrderItem;
-import org.wita.erp.domain.entities.transaction.order.dtos.OrderDTO;
+import org.wita.erp.domain.entities.transaction.dtos.OrderDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.OrderItemDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateOrderRequestDTO;
 import org.wita.erp.domain.entities.payment.mappers.PaymentTypeMapper;

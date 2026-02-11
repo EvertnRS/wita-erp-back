@@ -8,6 +8,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
+import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
+import org.wita.erp.domain.entities.transaction.order.Order;
+import org.wita.erp.domain.entities.transaction.order.mappers.OrderMapper;
+import org.wita.erp.domain.entities.transaction.purchase.Purchase;
+import org.wita.erp.domain.entities.transaction.purchase.mappers.PurchaseMapper;
 import org.wita.erp.domain.repositories.transaction.TransactionRepository;
 import org.wita.erp.infra.exceptions.transaction.TransactionException;
 
@@ -17,21 +22,33 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TransactionService {
     private final TransactionRepository transactionRepository;
+    private final OrderMapper orderMapper;
+    private final PurchaseMapper purchaseMapper;
 
-    public ResponseEntity<Page<Transaction>> getAllTransactions(Pageable pageable, TransactionType transactionType) {
-        Page<Transaction> TransactionPage;
+    public ResponseEntity<Page<TransactionDTO>> getAllTransactions(Pageable pageable, TransactionType transactionType) {
 
         if (transactionType == TransactionType.PURCHASE) {
-            TransactionPage = transactionRepository.findAllPurchase(pageable);
+            Page<Purchase> TransactionPage = transactionRepository.findAllPurchase(pageable);
+            return ResponseEntity.ok(TransactionPage.map(purchaseMapper::toDTO));
         }
         else if(transactionType == TransactionType.ORDER){
-            TransactionPage = transactionRepository.findAllOrder(pageable);
+            Page<Order> TransactionPage = transactionRepository.findAllOrder(pageable);
+            return ResponseEntity.ok(TransactionPage.map(orderMapper::toDTO));
         }
         else {
-            TransactionPage = transactionRepository.findAll(pageable);
-        }
+            Page<Transaction> transactionPage = transactionRepository.findAll(pageable);
 
-        return ResponseEntity.ok(TransactionPage);
+            Page<TransactionDTO> dtoPage = transactionPage.map(transaction ->
+                    switch (transaction) {
+                        case Purchase purchase -> purchaseMapper.toDTO(purchase);
+                        case Order order -> orderMapper.toDTO(order);
+                        default ->
+                                throw new IllegalStateException("Unexpected value: " + transaction);
+                    }
+            );
+
+            return ResponseEntity.ok(dtoPage);
+        }
     }
 
     public ResponseEntity<Transaction> delete(UUID id) {

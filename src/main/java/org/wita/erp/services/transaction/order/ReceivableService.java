@@ -64,9 +64,9 @@ public class ReceivableService {
         }
 
         LocalDate firstDueDate = LocalDate.now().plusDays(30);
+        BigDecimal installmentValue = order.getValue().divide(BigDecimal.valueOf(order.getInstallments()), 2, RoundingMode.HALF_UP);
 
         List<Receivable> receivables = new java.util.ArrayList<>(List.of());
-        BigDecimal installmentValue = data.value().divide(BigDecimal.valueOf(order.getInstallments()), 2, RoundingMode.HALF_UP);
 
         for (int i = 1; i <= order.getInstallments(); i++) {
             Receivable receivable = new Receivable();
@@ -111,12 +111,11 @@ public class ReceivableService {
     @Async
     public void onReceivableOrderCreated(CreateReceivableOrderObserver event) {
         try{
-            Order order = orderRepository.findById(event.order())
+            orderRepository.findById(event.order())
                     .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
             CreateReceivableRequestDTO dto = new CreateReceivableRequestDTO(
                     PaymentStatus.PENDING,
-                    order.getValue(),
                     event.order()
             );
 
@@ -150,7 +149,6 @@ public class ReceivableService {
 
             this.save(new CreateReceivableRequestDTO(
                     PaymentStatus.PENDING,
-                    order.getValue(),
                     event.order()
             ));
         }

@@ -7,6 +7,7 @@ import java.util.UUID;
 
 public record CreateReplacementPurchaseRequestDTO(
                                        @NotNull String transactionCode,
+                                       Integer installments,
                                        String description,
                                        @NotNull UUID buyer,
                                        @NotNull UUID supplier,

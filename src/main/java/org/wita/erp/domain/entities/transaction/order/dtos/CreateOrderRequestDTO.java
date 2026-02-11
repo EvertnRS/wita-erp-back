@@ -1,5 +1,6 @@
 package org.wita.erp.domain.entities.transaction.order.dtos;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -8,7 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public record CreateOrderRequestDTO(@NotNull @Min(0) BigDecimal discount,
-                                    Integer installments,
+                                    @Min(1) @Max(48) Integer installments,
                                     @NotNull UUID seller,
                                     @NotNull UUID paymentType,
                                     @NotNull String transactionCode,

@@ -5,6 +5,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.wita.erp.domain.entities.transaction.Transaction;
+import org.wita.erp.domain.entities.transaction.order.Order;
+import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 
 import java.util.UUID;
 
@@ -13,7 +15,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     SELECT t FROM Transaction t
     WHERE TYPE(t) = Purchase
 """)
-    Page<Transaction> findAllPurchase(
+    Page<Purchase> findAllPurchase(
             Pageable pageable
     );
 
@@ -21,7 +23,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     SELECT t FROM Transaction t
     WHERE TYPE(t) = Order
 """)
-    Page<Transaction> findAllOrder(
+    Page<Order> findAllOrder(
             Pageable pageable
     );
 }

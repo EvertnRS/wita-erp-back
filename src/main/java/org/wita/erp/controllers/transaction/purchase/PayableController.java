@@ -8,8 +8,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.transaction.purchase.Payable;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.CreatePayableRequestDTO;
+import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 import org.wita.erp.services.transaction.purchase.PayableService;
 
@@ -24,25 +24,25 @@ public class PayableController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('PAYABLE_READ')")
-    public ResponseEntity<Page<Payable>> getAllPayable(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
+    public ResponseEntity<Page<PayableDTO>> getAllPayable(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return payableService.getAllPayable(pageable, searchTerm);
     }
 
     @PostMapping("/create")
     @PreAuthorize("hasAuthority('PAYABLE_CREATE')")
-    public ResponseEntity<List<Payable>> create(@Valid @RequestBody CreatePayableRequestDTO data) {
+    public ResponseEntity<List<PayableDTO>> create(@Valid @RequestBody CreatePayableRequestDTO data) {
         return payableService.save(data);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PAYABLE_UPDATE')")
-    public ResponseEntity<Payable> update(@PathVariable UUID id, @RequestBody @Valid UpdatePayableRequestDTO data) {
+    public ResponseEntity<PayableDTO> update(@PathVariable UUID id, @RequestBody @Valid UpdatePayableRequestDTO data) {
         return payableService.update(id, data);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('PAYABLE_DELETE')")
-    public ResponseEntity<Payable> delete(@PathVariable UUID id) {
+    public ResponseEntity<PayableDTO> delete(@PathVariable UUID id) {
         return payableService.delete(id);
     }
 }

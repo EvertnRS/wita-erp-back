@@ -8,6 +8,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.domain.entities.transaction.dtos.PurchaseDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.*;
 import org.wita.erp.services.transaction.purchase.PurchaseService;
 
@@ -37,21 +38,28 @@ public class PurchaseController {
         return purchaseService.save(data);
     }
 
-    /*@PostMapping("/add-item/{purchaseId}")
-    @PreAuthorize("hasAuthority('PURCHASE_UPDATE')")
-    public ResponseEntity<PurchaseDTO> addProductInPurchase(@PathVariable UUID purchaseId, @RequestBody @Valid ProductPurchaseRequestDTO data) {
-        return purchaseService.addProductInPurchase(purchaseId, data);
-    }*/
-
     @PutMapping("replacement/{id}")
     @PreAuthorize("hasAuthority('PURCHASE_UPDATE')")
-    public ResponseEntity<PurchaseDTO> updateReplacement(@PathVariable UUID id, @RequestBody @Valid UpdatePurchaseReplacementRequestDTO data) {
+    public ResponseEntity<PurchaseDTO> updateReplacement(@PathVariable UUID id, @RequestBody @Valid UpdatePurchaseRequestDTO data) {
         return purchaseService.update(id, data);
     }
 
+    @PostMapping("/add-item/{orderId}")
+    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
+    public ResponseEntity<PurchaseDTO> addProductInPurchase(@PathVariable UUID orderId, @RequestBody @Valid ProductInPurchaseDTO data) {
+        return purchaseService.addProductInPurchase(orderId, data);
+    }
+
+    @PostMapping("/remove-item/{orderId}")
+    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
+    public ResponseEntity<PurchaseDTO> removeProductInPurchase(@PathVariable UUID orderId, @RequestBody @Valid ProductInPurchaseDTO data) {
+        return purchaseService.removeProductInPurchase(orderId, data);
+    }
+
+
     @PutMapping("expense/{id}")
     @PreAuthorize("hasAuthority('PURCHASE_UPDATE')")
-    public ResponseEntity<PurchaseDTO> updateExpense(@PathVariable UUID id, @RequestBody @Valid UpdatePurchaseExpenseRequestDTO data) {
+    public ResponseEntity<PurchaseDTO> updateExpense(@PathVariable UUID id, @RequestBody @Valid UpdatePurchaseRequestDTO data) {
         return purchaseService.update(id, data);
     }
 

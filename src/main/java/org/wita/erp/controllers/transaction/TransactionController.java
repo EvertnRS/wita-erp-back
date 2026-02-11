@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
+import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
 import org.wita.erp.services.transaction.TransactionService;
 
 import java.util.UUID;
@@ -21,7 +22,7 @@ public class TransactionController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('ORDER_READ') and hasAuthority('PURCHASE_READ')")
-    public ResponseEntity<Page<Transaction>> getAllTransactions(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) TransactionType transactionType) {
+    public ResponseEntity<Page<TransactionDTO>> getAllTransactions(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) TransactionType transactionType) {
         return transactionService.getAllTransactions(pageable, transactionType);
     }
 

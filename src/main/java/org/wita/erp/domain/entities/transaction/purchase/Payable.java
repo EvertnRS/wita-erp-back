@@ -10,6 +10,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.wita.erp.domain.entities.status.PaymentStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,6 +24,9 @@ import java.util.UUID;
 public class Payable {
     @GeneratedValue(strategy = GenerationType.AUTO) @Id
     private UUID id;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal value;
 
     @FutureOrPresent
     @Column(name = "due_date", nullable = false)

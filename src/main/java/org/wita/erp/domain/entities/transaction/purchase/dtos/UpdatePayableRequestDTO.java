@@ -2,10 +2,9 @@ package org.wita.erp.domain.entities.transaction.purchase.dtos;
 
 import jakarta.validation.constraints.FutureOrPresent;
 import org.wita.erp.domain.entities.status.PaymentStatus;
+
 import java.time.LocalDate;
-import java.util.UUID;
 
 public record UpdatePayableRequestDTO(@FutureOrPresent LocalDate dueDate,
-                                      PaymentStatus paymentStatus,
-                                      UUID purchase) {
+                                      PaymentStatus paymentStatus) {
 }
