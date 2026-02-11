@@ -22,12 +22,15 @@ import org.wita.erp.domain.repositories.transaction.purchase.PayableRepository;
 import org.wita.erp.domain.repositories.transaction.purchase.PurchaseRepository;
 import org.wita.erp.infra.exceptions.payable.PayableException;
 import org.wita.erp.infra.exceptions.purchase.PurchaseException;
+import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
+import org.wita.erp.infra.schedules.scheduler.SchedulerService;
 import org.wita.erp.services.transaction.purchase.observers.CreatePayablePurchaseObserver;
 import org.wita.erp.services.transaction.purchase.observers.PayableCompensationObserver;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -38,6 +41,7 @@ public class PayableService {
     private final PayableRepository payableRepository;
     private final PurchaseRepository purchaseRepository;
     private final PayableMapper payableMapper;
+    private final SchedulerService schedulerService;
     private final ApplicationEventPublisher publisher;
 
 
@@ -73,6 +77,35 @@ public class PayableService {
             payable.setValue(installmentValue);
             payable.setInstallment(i);
             payableRepository.save(payable);
+
+            LocalDate dueDate = payable.getDueDate();
+            int closingDay = purchase.getCompanyPaymentType().getClosingDay();
+
+            LocalDate baseDate = dueDate;
+
+            if (dueDate.getDayOfMonth() > closingDay) {
+                baseDate = dueDate.plusMonths(1);
+            }
+
+            int lastDayOfMonth = baseDate.lengthOfMonth();
+            int safeDay = Math.min(closingDay, lastDayOfMonth);
+
+            LocalDate closingDate = baseDate.withDayOfMonth(safeDay);
+
+            LocalDateTime executeAt = closingDate.atStartOfDay();
+
+
+            schedulerService.schedule(
+                    ScheduledTaskTypes.PAYABLE_DUE_SOON,
+                    payable.getId().toString(),
+                    executeAt.minusDays(3)
+            );
+
+            schedulerService.schedule(
+                    ScheduledTaskTypes.PAYABLE_OVERDUE,
+                    payable.getId().toString(),
+                    executeAt
+            );
 
             payables.add(payable);
         }

@@ -262,7 +262,7 @@ public class OrderService {
     }
 
     private OrderItem createOrderItem(Product product, int quantity) {
-        if ((product.getQuantityInStock() - quantity) <= product.getMinQuantity()){
+        if ((product.getQuantityInStock() - quantity) <= 0){
             throw new ProductException("Not enough stock for product: " + product.getName(), HttpStatus.BAD_REQUEST);
         }
 

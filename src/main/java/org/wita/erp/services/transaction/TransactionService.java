@@ -51,11 +51,20 @@ public class TransactionService {
         }
     }
 
-    public ResponseEntity<Transaction> delete(UUID id) {
+    public ResponseEntity<TransactionDTO> delete(UUID id) {
         Transaction transaction = transactionRepository.findById(id)
                 .orElseThrow(() -> new TransactionException("Transaction not found", HttpStatus.NOT_FOUND));
+
         transaction.setActive(false);
         transactionRepository.save(transaction);
-        return ResponseEntity.ok(transaction);
+
+        TransactionDTO dto = switch (transaction) {
+            case Purchase purchase -> purchaseMapper.toDTO(purchase);
+            case Order order -> orderMapper.toDTO(order);
+            default -> throw new IllegalStateException("Unexpected value: " + transaction);
+        };
+
+        return ResponseEntity.ok(dto);
     }
+
 }

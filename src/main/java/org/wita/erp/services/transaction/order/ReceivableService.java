@@ -23,6 +23,8 @@ import org.wita.erp.domain.repositories.transaction.order.ReceivableRepository;
 import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.payable.PayableException;
 import org.wita.erp.infra.exceptions.receivable.ReceivableException;
+import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
+import org.wita.erp.infra.schedules.scheduler.SchedulerService;
 import org.wita.erp.services.transaction.order.observers.CreateReceivableOrderObserver;
 import org.wita.erp.services.transaction.order.observers.ReceivableCompensationObserver;
 
@@ -39,6 +41,7 @@ public class ReceivableService {
     private final ReceivableRepository receivableRepository;
     private final OrderRepository orderRepository;
     private final ReceivableMapper receivableMapper;
+    private final SchedulerService schedulerService;
     private final ApplicationEventPublisher publisher;
 
 
@@ -76,6 +79,18 @@ public class ReceivableService {
             receivable.setInstallment(i);
             receivable.setValue(installmentValue);
             receivableRepository.save(receivable);
+
+            schedulerService.schedule(
+                    ScheduledTaskTypes.RECEIVABLE_DUE_SOON,
+                    receivable.getId().toString(),
+                    receivable.getDueDate().minusDays(3).atStartOfDay()
+            );
+
+            schedulerService.schedule(
+                    ScheduledTaskTypes.RECEIVABLE_OVERDUE,
+                    receivable.getId().toString(),
+                    receivable.getDueDate().atStartOfDay()
+            );
 
             receivables.add(receivable);
         }

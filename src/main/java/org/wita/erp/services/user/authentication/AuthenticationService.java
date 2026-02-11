@@ -1,7 +1,6 @@
-package org.wita.erp.services.user;
+package org.wita.erp.services.user.authentication;
 
 import jakarta.mail.MessagingException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -66,7 +65,8 @@ public class AuthenticationService {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-        String template = emailProvider.buildTemplate("Recuperação de Senha",
+        String template = emailProvider.buildRecoveryPasswordTemplate(
+                "Recuperação de Senha",
                 "Olá " + user.getName() + ", recebemos um pedido para redefinir sua senha.",
                 browser,
                 device,

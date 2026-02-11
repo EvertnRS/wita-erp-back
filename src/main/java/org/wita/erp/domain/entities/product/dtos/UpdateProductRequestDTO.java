@@ -1,5 +1,6 @@
 package org.wita.erp.domain.entities.product.dtos;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
@@ -9,7 +10,7 @@ public record UpdateProductRequestDTO(
         String name,
         BigDecimal price,
         @Positive Integer minQuantity,
-        @Positive Integer quantityInStock,
+        @Positive @Min(0) Integer quantityInStock,
         UUID category,
         UUID supplier
 ) {
