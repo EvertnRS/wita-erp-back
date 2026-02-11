@@ -38,7 +38,7 @@ public class PurchaseController {
         return purchaseService.save(data);
     }
 
-    @PutMapping("replacement/{id}")
+    @PutMapping("{id}")
     @PreAuthorize("hasAuthority('PURCHASE_UPDATE')")
     public ResponseEntity<PurchaseDTO> updateReplacement(@PathVariable UUID id, @RequestBody @Valid UpdatePurchaseRequestDTO data) {
         return purchaseService.update(id, data);

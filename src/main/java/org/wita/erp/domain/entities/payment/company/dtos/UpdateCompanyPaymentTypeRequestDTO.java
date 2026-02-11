@@ -1,8 +1,6 @@
 package org.wita.erp.domain.entities.payment.company.dtos;
 
-import org.wita.erp.domain.entities.payment.PaymentMethod;
-
-public record UpdateCompanyPaymentTypeRequestDTO(PaymentMethod paymentMethod,
+public record UpdateCompanyPaymentTypeRequestDTO(
                                                  Boolean isImmediate,
                                                  Boolean allowsInstallments,
                                                  String bankCode,

@@ -50,7 +50,6 @@ public class CustomerPaymentTypeService {
         customerPaymentType.setCustomer(customer);
 
         ResponseEntity<PaymentType> response = paymentTypeService.save(customerPaymentType, new CreatePaymentTypeRequestDTO(
-                data.paymentMethod(),
                 data.isImmediate(),
                 data.allowsInstallments()
         ));
@@ -62,17 +61,9 @@ public class CustomerPaymentTypeService {
         CustomerPaymentType customerPaymentType = customerPaymentTypeRepository.findById(id)
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
 
-        if(data.customer() != null){
-            Customer customer = customerRepository.findById(data.customer())
-                    .orElseThrow(() -> new PaymentTypeException("Customer not found", HttpStatus.NOT_FOUND));
-
-            customerPaymentType.setCustomer(customer);
-        }
-
         customerPaymentTypeMapper.updateCustomerPaymentTypeFromDTO(data, customerPaymentType);
 
         ResponseEntity<PaymentType> response = paymentTypeService.update(customerPaymentType, new UpdatePaymentTypeRequestDTO(
-                data.paymentMethod(),
                 data.isImmediate(),
                 data.allowsInstallments()
         ));

@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.payment.PaymentMethod;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.company.dtos.CreateCompanyPaymentTypeRequestDTO;
@@ -27,14 +26,8 @@ public class CompanyPaymentTypeService {
     private final PaymentTypeService paymentTypeService;
     private final CompanyPaymentTypeRepository companyPaymentTypeRepository;
 
-    public ResponseEntity<Page<CompanyPaymentType>> getAllCompanyPaymentTypes(Pageable pageable, String searchTerm) {
-        Page<CompanyPaymentType> companyPaymentTypePage;
-
-        if (searchTerm != null && !searchTerm.isBlank()) {
-            companyPaymentTypePage = companyPaymentTypeRepository.findBySearchTerm(searchTerm, pageable);
-        } else {
-            companyPaymentTypePage = companyPaymentTypeRepository.findAll(pageable);
-        }
+    public ResponseEntity<Page<CompanyPaymentType>> getAllCompanyPaymentTypes(Pageable pageable) {
+        Page<CompanyPaymentType> companyPaymentTypePage = companyPaymentTypeRepository.findAll(pageable);
 
         return ResponseEntity.ok(companyPaymentTypePage);
     }
@@ -43,7 +36,7 @@ public class CompanyPaymentTypeService {
         CompanyPaymentType companyPaymentType = getCompanyPaymentType(data);
 
         ResponseEntity<PaymentType> response = paymentTypeService.save(companyPaymentType, new CreatePaymentTypeRequestDTO(
-                data.paymentMethod(),
+
                 data.isImmediate(),
                 data.allowsInstallments()
         ));
@@ -57,7 +50,7 @@ public class CompanyPaymentTypeService {
         companyPaymentType.setAgencyNumber(data.agencyNumber());
         companyPaymentType.setAccountNumber(data.accountNumber());
 
-        if(data.paymentMethod() == PaymentMethod.CREDIT_CARD){
+        if(data.allowsInstallments() && !data.isImmediate()){
             companyPaymentType.setLastFourDigits(data.lastFourDigits());
             companyPaymentType.setBrand(data.brand());
             companyPaymentType.setClosingDay(data.closingDay());
@@ -72,7 +65,7 @@ public class CompanyPaymentTypeService {
         companyPaymentTypeMapper.updateCompanyPaymentTypeFromDTO(data, companyPaymentType);
 
         ResponseEntity<PaymentType> response = paymentTypeService.update(companyPaymentType, new UpdatePaymentTypeRequestDTO(
-                data.paymentMethod(),
+
                 data.isImmediate(),
                 data.allowsInstallments()
         ));

@@ -6,7 +6,6 @@ import org.wita.erp.domain.entities.payment.customer.dto.UpdateCustomerPaymentTy
 
 @Mapper(componentModel = "spring")
 public interface CustomerPaymentTypeMapper {
-    @Mapping(target = "paymentMethod", ignore = true)
     @Mapping(target = "isImmediate", ignore = true)
     @Mapping(target = "allowsInstallments", ignore = true)
     @Mapping(target = "customer", ignore = true)

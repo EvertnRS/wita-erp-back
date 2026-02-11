@@ -24,7 +24,7 @@ public class CustomerPaymentTypeController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('CUSTOMER_PAYMENT_READ')")
-    public ResponseEntity<Page<CustomerPaymentType>> getAllCustomerPaymentTypes(@PageableDefault(size = 10, sort = "paymentMethod") Pageable pageable, @RequestParam(required = false) String searchTerm) {
+    public ResponseEntity<Page<CustomerPaymentType>> getAllCustomerPaymentTypes(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return customerPaymentService.getAllCustomerPaymentTypes(pageable, searchTerm);
     }
 

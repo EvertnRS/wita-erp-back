@@ -28,11 +28,11 @@ public class PayableController {
         return payableService.getAllPayable(pageable, searchTerm);
     }
 
-    @PostMapping("/create")
+    /*@PostMapping("/create")
     @PreAuthorize("hasAuthority('PAYABLE_CREATE')")
     public ResponseEntity<List<PayableDTO>> create(@Valid @RequestBody CreatePayableRequestDTO data) {
         return payableService.save(data);
-    }
+    }*/
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('PAYABLE_UPDATE')")
