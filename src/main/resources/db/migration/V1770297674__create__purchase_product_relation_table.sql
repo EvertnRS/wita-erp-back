@@ -1,4 +1,4 @@
-CREATE TABLE product_item
+CREATE TABLE purchase_item
 (
     id         UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     product_id UUID NOT NULL,
@@ -12,4 +12,4 @@ CREATE TABLE product_item
     CONSTRAINT unique_product_per_purchase UNIQUE (purchase_id, product_id)
 );
 
-CREATE INDEX idx_product_purchase_id ON product_item(purchase_id);
+CREATE INDEX idx_product_purchase_id ON purchase_item(purchase_id);

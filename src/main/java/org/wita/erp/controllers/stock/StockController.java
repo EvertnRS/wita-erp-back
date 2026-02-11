@@ -9,8 +9,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.stock.StockMovement;
-import org.wita.erp.domain.entities.stock.dtos.CreateStockRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.StockMovementDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateStockRequestDTO;
 import org.wita.erp.services.stock.StockService;
@@ -29,11 +27,11 @@ public class StockController {
         return stockService.getAllStock(pageable, searchTerm);
     }
 
-    @PostMapping("/create")
+    /*@PostMapping("/create")
     @PreAuthorize("hasAuthority('STOCK_CREATE')")
     public ResponseEntity<StockMovementDTO> create(@Valid @RequestBody CreateStockRequestDTO data) {
         return stockService.save(data);
-    }
+    }*/
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('STOCK_UPDATE')")

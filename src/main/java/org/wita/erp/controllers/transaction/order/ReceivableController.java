@@ -8,13 +8,10 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.transaction.order.Receivable;
-import org.wita.erp.domain.entities.transaction.order.dtos.CreateReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 import org.wita.erp.services.transaction.order.ReceivableService;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,11 +26,11 @@ public class ReceivableController {
         return receivableService.getAllReceivable(pageable, searchTerm);
     }
 
-    @PostMapping("/create")
+    /*@PostMapping("/create")
     @PreAuthorize("hasAuthority('RECEIVABLE_CREATE')")
     public ResponseEntity<List<ReceivableDTO>> create(@Valid @RequestBody CreateReceivableRequestDTO data) {
         return receivableService.save(data);
-    }
+    }*/
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('RECEIVABLE_UPDATE')")

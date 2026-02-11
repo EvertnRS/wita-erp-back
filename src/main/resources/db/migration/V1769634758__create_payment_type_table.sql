@@ -1,7 +1,6 @@
 CREATE TABLE payment_type
 (
     id                UUID                    DEFAULT gen_random_uuid() PRIMARY KEY,
-    payment_method            VARCHAR(50)           NOT NULL,
     is_immediate            BOOLEAN               NOT NULL,
     allows_installments            BOOLEAN               NOT NULL,
     active            BOOLEAN                 DEFAULT TRUE,

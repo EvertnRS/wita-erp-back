@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.user.User;
@@ -34,6 +35,10 @@ public class Purchase extends Transaction {
     @ManyToOne
     @JoinColumn(name = "supplier_id", nullable = false)
     private Supplier supplier;
+
+    @ManyToOne
+    @JoinColumn(name = "company_payment_type_id", nullable = false)
+    private CompanyPaymentType companyPaymentType;
 
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseItem> items = new ArrayList<>();

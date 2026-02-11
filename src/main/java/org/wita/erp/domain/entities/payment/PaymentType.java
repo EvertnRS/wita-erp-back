@@ -21,9 +21,6 @@ public class PaymentType {
     @GeneratedValue(strategy = GenerationType.AUTO) @Id
     private UUID id;
 
-    @Column(name = "payment_method", nullable = false)
-    private PaymentMethod paymentMethod;
-
     @Column(name = "is_immediate", nullable = false)
     private Boolean isImmediate;
 

@@ -6,9 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.wita.erp.domain.entities.payment.PaymentType;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -31,10 +32,11 @@ public class Transaction {
 
     private String description;
 
-    @ManyToOne
-    @JoinColumn(name = "payment_type_id", nullable = false)
-    private PaymentType paymentType;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     @Column(nullable = false)
     private Boolean active = true;
+
 }

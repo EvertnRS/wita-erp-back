@@ -24,8 +24,8 @@ public class CompanyPaymentTypeController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('COMPANY_PAYMENT_READ')")
-    public ResponseEntity<Page<CompanyPaymentType>> getAllCompanyPaymentTypes(@PageableDefault(size = 10, sort = "paymentMethod") Pageable pageable, @RequestParam(required = false) String searchTerm) {
-        return companyPaymentService.getAllCompanyPaymentTypes(pageable, searchTerm);
+    public ResponseEntity<Page<CompanyPaymentType>> getAllCompanyPaymentTypes(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+        return companyPaymentService.getAllCompanyPaymentTypes(pageable);
     }
 
     @PostMapping("/create")

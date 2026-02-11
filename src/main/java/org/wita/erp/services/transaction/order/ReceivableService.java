@@ -59,14 +59,14 @@ public class ReceivableService {
         Order order = orderRepository.findById(data.order())
                 .orElseThrow(() -> new OrderException("Order not registered in the system", HttpStatus.NOT_FOUND));
 
-        if (order.getPaymentType().getIsImmediate()){
+        if (order.getCustomerPaymentType().getIsImmediate()){
             throw new PayableException("Cannot create receivable for immediate payment orders", HttpStatus.BAD_REQUEST);
         }
 
         LocalDate firstDueDate = LocalDate.now().plusDays(30);
+        BigDecimal installmentValue = order.getValue().divide(BigDecimal.valueOf(order.getInstallments()), 2, RoundingMode.HALF_UP);
 
         List<Receivable> receivables = new java.util.ArrayList<>(List.of());
-        BigDecimal installmentValue = data.value().divide(BigDecimal.valueOf(order.getInstallments()), 2, RoundingMode.HALF_UP);
 
         for (int i = 1; i <= order.getInstallments(); i++) {
             Receivable receivable = new Receivable();
@@ -111,12 +111,11 @@ public class ReceivableService {
     @Async
     public void onReceivableOrderCreated(CreateReceivableOrderObserver event) {
         try{
-            Order order = orderRepository.findById(event.order())
+            orderRepository.findById(event.order())
                     .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
             CreateReceivableRequestDTO dto = new CreateReceivableRequestDTO(
                     PaymentStatus.PENDING,
-                    order.getValue(),
                     event.order()
             );
 
@@ -134,7 +133,7 @@ public class ReceivableService {
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
-        if (order.getPaymentType().getIsImmediate() || !order.getPaymentType().getAllowsInstallments()){
+        if (order.getCustomerPaymentType().getIsImmediate() || !order.getCustomerPaymentType().getAllowsInstallments()){
             throw new ReceivableException("Cannot update receivable for this payment method", HttpStatus.BAD_REQUEST);
         }
 
@@ -150,7 +149,6 @@ public class ReceivableService {
 
             this.save(new CreateReceivableRequestDTO(
                     PaymentStatus.PENDING,
-                    order.getValue(),
                     event.order()
             ));
         }

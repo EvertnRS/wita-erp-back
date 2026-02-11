@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.wita.erp.domain.entities.customer.Customer;
+import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.user.User;
 
@@ -40,8 +40,8 @@ public class Order extends Transaction {
     private User seller;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @JoinColumn(name = "customer_payment_type_id", nullable = false)
+    private CustomerPaymentType customerPaymentType;
 
     @OneToMany(mappedBy = "orders", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();

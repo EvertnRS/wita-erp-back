@@ -28,7 +28,6 @@ public class PaymentTypeService {
             paymentType.setAllowsInstallments(data.allowsInstallments());
         }
 
-        paymentType.setPaymentMethod(data.paymentMethod());
         paymentTypeRepository.save(paymentType);
 
         return ResponseEntity.ok(paymentType);

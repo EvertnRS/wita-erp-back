@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.wita.erp.domain.entities.supplier.Supplier;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -53,6 +54,10 @@ public class Product {
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    @ManyToOne
+    @JoinColumn(name = "supplier_id", nullable = false)
+    private Supplier supplier;
 
     @Column(nullable = false)
     private Boolean active = true;
