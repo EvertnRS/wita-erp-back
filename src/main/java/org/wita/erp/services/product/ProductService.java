@@ -2,7 +2,6 @@ package org.wita.erp.services.product;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,15 +9,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.product.Category;
+import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.product.mappers.ProductMapper;
-import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.StockMovementType;
-import org.wita.erp.infra.exceptions.product.CategoryException;
-import org.wita.erp.infra.exceptions.product.ProductException;
+import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.repositories.product.CategoryRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
+import org.wita.erp.domain.repositories.supplier.SupplierRepository;
+import org.wita.erp.infra.exceptions.product.CategoryException;
+import org.wita.erp.infra.exceptions.product.ProductException;
+import org.wita.erp.infra.exceptions.supplier.SupplierException;
 import org.wita.erp.services.stock.observers.StockMovementObserver;
 import org.wita.erp.services.stock.observers.UpdateStockMovementObserver;
 
@@ -31,7 +33,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
-    private final ApplicationEventPublisher publisher;
+    private final SupplierRepository supplierRepository;
 
     public ResponseEntity<Page<Product>> getAllProducts(Pageable pageable, String searchTerm) {
         Page<Product> productPage;
@@ -49,22 +51,26 @@ public class ProductService {
         Category category = categoryRepository.findById(data.category())
                 .orElseThrow(() -> new CategoryException("Category not registered in the system", HttpStatus.NOT_FOUND));
 
+        Supplier supplier = supplierRepository.findById(data.supplier())
+                .orElseThrow(() -> new SupplierException("Supplier not registered in the system", HttpStatus.NOT_FOUND));
+
         if (productRepository.findByName(data.name()) != null) {
             throw new ProductException("Product already exists", HttpStatus.CONFLICT);
         }
 
-        Product product = getProduct(data, category);
+        Product product = getProduct(data, category, supplier);
 
         productRepository.save(product);
 
         return ResponseEntity.ok(product);
     }
 
-    private Product getProduct(CreateProductRequestDTO data, Category category) {
+    private Product getProduct(CreateProductRequestDTO data, Category category, Supplier supplier) {
         Product product = new Product();
         product.setName(data.name());
         product.setPrice(data.price());
         product.setDiscount(data.discount());
+        product.setSupplier(supplier);
 
         if (data.discount().compareTo(BigDecimal.ZERO) > 0) {
             product.setMinQuantityForDiscount(data.minQuantityForDiscount());
@@ -86,6 +92,12 @@ public class ProductService {
             Category category = categoryRepository.findById(data.category())
                     .orElseThrow(() -> new CategoryException("Category not registered in the system", HttpStatus.NOT_FOUND));
             product.setCategory(category);
+        }
+
+        if (data.supplier() != null) {
+            Supplier supplier = supplierRepository.findById(data.supplier())
+                    .orElseThrow(() -> new SupplierException("Supplier not registered in the system", HttpStatus.NOT_FOUND));
+            product.setSupplier(supplier);
         }
 
         productMapper.updateProductFromDTO(data, product);

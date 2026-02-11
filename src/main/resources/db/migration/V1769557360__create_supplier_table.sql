@@ -10,4 +10,4 @@ CREATE TABLE supplier
 
 );
 
-CREATE UNIQUE INDEX supplier_unique_name_idx ON supplier(name)
+CREATE UNIQUE INDEX supplier_unique_cnpj_idx ON supplier(cnpj)

@@ -12,7 +12,7 @@ public interface PayableMapper {
     void updatePayableFromDTO(UpdatePayableRequestDTO dto, @MappingTarget Payable payable);
 
     @Mapping(source = "purchase.id", target = "purchase")
-    @Mapping(source = "purchase.paymentType", target = "paymentType")
+    @Mapping(source = "purchase.companyPaymentType", target = "companyPaymentType")
     PayableDTO toDTO(Payable payable);
 
 }

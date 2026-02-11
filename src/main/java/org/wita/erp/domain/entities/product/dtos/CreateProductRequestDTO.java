@@ -15,6 +15,7 @@ public record CreateProductRequestDTO(
         @NotNull @Min(0) Integer minQuantityForDiscount,
         @NotNull @Positive Integer minQuantity,
         @NotNull @Positive Integer quantityInStock,
-        @NotNull UUID category
+        @NotNull UUID category,
+        @NotNull UUID supplier
 ) {
 }

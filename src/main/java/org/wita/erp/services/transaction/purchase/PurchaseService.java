@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
@@ -21,7 +20,7 @@ import org.wita.erp.domain.entities.transaction.purchase.PurchaseItem;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.*;
 import org.wita.erp.domain.entities.transaction.purchase.mappers.PurchaseMapper;
 import org.wita.erp.domain.entities.user.User;
-import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
+import org.wita.erp.domain.repositories.payment.company.CompanyPaymentTypeRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.supplier.SupplierRepository;
@@ -47,7 +46,7 @@ public class PurchaseService {
     private final PurchaseMapper purchaseMapper;
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
-    private final PaymentTypeRepository paymentTypeRepository;
+    private final CompanyPaymentTypeRepository companyPaymentTypeRepository;
     private final MovementReasonRepository movementReasonRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher publisher;
@@ -76,13 +75,10 @@ public class PurchaseService {
         Supplier supplier = supplierRepository.findById(data.supplier())
                 .orElseThrow(() -> new SupplierException("Supplier not registered in the system", HttpStatus.NOT_FOUND));
 
-        PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
+        CompanyPaymentType companyPaymentType = companyPaymentTypeRepository.findById(data.companyPaymentType())
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
-        if (!(paymentType instanceof CompanyPaymentType)) {
-            throw new PurchaseException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
-        }
 
-        if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && data.installments() != null){
+        if((!companyPaymentType.getAllowsInstallments() || companyPaymentType.getIsImmediate()) && data.installments() != null){
             throw new PurchaseException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
         }
 
@@ -100,7 +96,7 @@ public class PurchaseService {
         purchase.setTransactionCode(data.transactionCode());
         purchase.setBuyer(buyer);
         purchase.setSupplier(supplier);
-        purchase.setPaymentType(paymentType);
+        purchase.setCompanyPaymentType(companyPaymentType);
 
         for (ProductPurchaseRequestDTO itemData : data.products()) {
             Product product = productRepository.findById(itemData.productId())
@@ -111,11 +107,6 @@ public class PurchaseService {
         }
 
         purchase.calculateSubTotal();
-        purchaseRepository.save(purchase);
-
-        publisher.publishEvent(
-                new CreatePurchaseObserver(purchase.getId(), movementReason.getId())
-        );
 
         if (data.installments() != null) {
             publisher.publishEvent(
@@ -124,6 +115,11 @@ public class PurchaseService {
         }
 
         purchaseRepository.save(purchase);
+
+        publisher.publishEvent(
+                new CreatePurchaseObserver(purchase.getId(), movementReason.getId())
+        );
+
 
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
@@ -140,13 +136,10 @@ public class PurchaseService {
         Supplier supplier = supplierRepository.findById(data.supplier())
                 .orElseThrow(() -> new SupplierException("Supplier not registered in the system", HttpStatus.NOT_FOUND));
 
-        PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
+        CompanyPaymentType companyPaymentType = companyPaymentTypeRepository.findById(data.companyPaymentType())
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
-        if (!(paymentType instanceof CompanyPaymentType)) {
-            throw new PurchaseException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
-        }
 
-        if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && data.installments() != null){
+        if((!companyPaymentType.getAllowsInstallments() || companyPaymentType.getIsImmediate()) && data.installments() != null){
             throw new PurchaseException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
         }
 
@@ -157,7 +150,7 @@ public class PurchaseService {
         purchase.setTransactionCode(data.transactionCode());
         purchase.setBuyer(buyer);
         purchase.setSupplier(supplier);
-        purchase.setPaymentType(paymentType);
+        purchase.setCompanyPaymentType(companyPaymentType);
 
         if (data.installments() != null) {
             publisher.publishEvent(
@@ -192,18 +185,15 @@ public class PurchaseService {
             purchase.setSupplier(supplier);
         }
 
-        if (data.paymentType() != null){
-            PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
+        if (data.companyPaymentType() != null){
+            CompanyPaymentType companyPaymentType = companyPaymentTypeRepository.findById(data.companyPaymentType())
                     .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
-            if (!(paymentType instanceof CompanyPaymentType)) {
-                throw new PurchaseException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
-            }
 
-            if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && data.installments() != null){
+            if((!companyPaymentType.getAllowsInstallments() || companyPaymentType.getIsImmediate()) && data.installments() != null){
                 throw new PurchaseException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
             }
 
-            purchase.setPaymentType(paymentType);
+            purchase.setCompanyPaymentType(companyPaymentType);
         }
 
         if (purchase.getItems().isEmpty()){

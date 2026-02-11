@@ -10,6 +10,7 @@ public record UpdateProductRequestDTO(
         BigDecimal price,
         @Positive Integer minQuantity,
         @Positive Integer quantityInStock,
-        UUID category
+        UUID category,
+        UUID supplier
 ) {
 }

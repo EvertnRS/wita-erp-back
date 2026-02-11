@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public record UpdatePurchaseRequestDTO(UUID buyer,
                               UUID supplier,
-                              UUID paymentType,
+                              UUID companyPaymentType,
                               UUID movementReason,
                               String transactionCode,
                               BigDecimal value,

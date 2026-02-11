@@ -40,20 +40,20 @@ public class PurchaseController {
 
     @PutMapping("{id}")
     @PreAuthorize("hasAuthority('PURCHASE_UPDATE')")
-    public ResponseEntity<PurchaseDTO> updateReplacement(@PathVariable UUID id, @RequestBody @Valid UpdatePurchaseRequestDTO data) {
+    public ResponseEntity<PurchaseDTO> update(@PathVariable UUID id, @RequestBody @Valid UpdatePurchaseRequestDTO data) {
         return purchaseService.update(id, data);
     }
 
-    @PostMapping("/add-item/{orderId}")
-    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
-    public ResponseEntity<PurchaseDTO> addProductInPurchase(@PathVariable UUID orderId, @RequestBody @Valid ProductInPurchaseDTO data) {
-        return purchaseService.addProductInPurchase(orderId, data);
+    @PostMapping("/add-item/{purchaseId}")
+    @PreAuthorize("hasAuthority('PURCHASE_UPDATE')")
+    public ResponseEntity<PurchaseDTO> addProductInPurchase(@PathVariable UUID purchaseId, @RequestBody @Valid ProductInPurchaseDTO data) {
+        return purchaseService.addProductInPurchase(purchaseId, data);
     }
 
-    @PostMapping("/remove-item/{orderId}")
-    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
-    public ResponseEntity<PurchaseDTO> removeProductInPurchase(@PathVariable UUID orderId, @RequestBody @Valid ProductInPurchaseDTO data) {
-        return purchaseService.removeProductInPurchase(orderId, data);
+    @PostMapping("/remove-item/{purchaseId}")
+    @PreAuthorize("hasAuthority('PURCHASE_UPDATE')")
+    public ResponseEntity<PurchaseDTO> removeProductInPurchase(@PathVariable UUID purchaseId, @RequestBody @Valid ProductInPurchaseDTO data) {
+        return purchaseService.removeProductInPurchase(purchaseId, data);
     }
 
 

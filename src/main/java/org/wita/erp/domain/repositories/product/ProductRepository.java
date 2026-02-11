@@ -11,7 +11,8 @@ import java.util.UUID;
 public interface ProductRepository extends JpaRepository<Product, UUID> {
     @Query("SELECT p FROM Product p WHERE " +
             "(LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(p.category.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+            "LOWER(p.category.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
+            "LOWER(p.supplier.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<Product> findBySearchTerm(String searchTerm, Pageable pageable);
 
     Product findByName(String name);

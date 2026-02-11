@@ -1,6 +1,6 @@
 package org.wita.erp.domain.entities.transaction.dtos;
 
-import org.wita.erp.domain.entities.payment.dtos.PaymentTypeDTO;
+import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.PurchaseItemDTO;
 import org.wita.erp.domain.entities.user.dtos.BuyerDTO;
 
@@ -12,7 +12,7 @@ public record PurchaseDTO(
         UUID id,
         BigDecimal total,
         String transactionCode,
-        BuyerDTO seller,
-        PaymentTypeDTO paymentType,
+        BuyerDTO buyer,
+        CompanyPaymentTypeDTO companyPaymentType,
         List<PurchaseItemDTO> items) implements TransactionDTO {
 }

@@ -11,7 +11,7 @@ public record CreateReplacementPurchaseRequestDTO(
                                        String description,
                                        @NotNull UUID buyer,
                                        @NotNull UUID supplier,
-                                       @NotNull UUID paymentType,
+                                       @NotNull UUID companyPaymentType,
                                        @NotNull UUID movementReason,
                                        @NotNull Set<ProductPurchaseRequestDTO> products) {
 }

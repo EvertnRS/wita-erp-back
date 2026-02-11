@@ -11,7 +11,7 @@ import java.util.UUID;
 public record CreateOrderRequestDTO(@NotNull @Min(0) BigDecimal discount,
                                     @Min(1) @Max(48) Integer installments,
                                     @NotNull UUID seller,
-                                    @NotNull UUID paymentType,
+                                    @NotNull UUID customerPaymentType,
                                     @NotNull String transactionCode,
                                     String description,
                                     @NotNull UUID movementReason,

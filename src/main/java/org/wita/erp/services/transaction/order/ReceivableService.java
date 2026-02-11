@@ -59,7 +59,7 @@ public class ReceivableService {
         Order order = orderRepository.findById(data.order())
                 .orElseThrow(() -> new OrderException("Order not registered in the system", HttpStatus.NOT_FOUND));
 
-        if (order.getPaymentType().getIsImmediate()){
+        if (order.getCustomerPaymentType().getIsImmediate()){
             throw new PayableException("Cannot create receivable for immediate payment orders", HttpStatus.BAD_REQUEST);
         }
 
@@ -133,7 +133,7 @@ public class ReceivableService {
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
-        if (order.getPaymentType().getIsImmediate() || !order.getPaymentType().getAllowsInstallments()){
+        if (order.getCustomerPaymentType().getIsImmediate() || !order.getCustomerPaymentType().getAllowsInstallments()){
             throw new ReceivableException("Cannot update receivable for this payment method", HttpStatus.BAD_REQUEST);
         }
 

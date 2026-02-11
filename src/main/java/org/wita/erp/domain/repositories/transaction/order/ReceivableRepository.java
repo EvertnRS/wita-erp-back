@@ -12,7 +12,7 @@ import java.util.UUID;
 public interface ReceivableRepository extends JpaRepository<Receivable, UUID> {
     @Query("SELECT r FROM Receivable r WHERE " +
             "(LOWER(r.order.seller.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
-            "(LOWER(r.order.customer.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+            "(LOWER(r.order.customerPaymentType.customer) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
     Page<Receivable> findBySearchTerm(String searchTerm, Pageable pageable);
 
     @Query("""

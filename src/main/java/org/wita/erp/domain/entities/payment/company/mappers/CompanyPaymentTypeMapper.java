@@ -2,6 +2,7 @@ package org.wita.erp.domain.entities.payment.company.mappers;
 
 import org.mapstruct.*;
 import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
+import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
 import org.wita.erp.domain.entities.payment.company.dtos.UpdateCompanyPaymentTypeRequestDTO;
 
 @Mapper(componentModel = "spring")
@@ -11,4 +12,5 @@ public interface CompanyPaymentTypeMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateCompanyPaymentTypeFromDTO(UpdateCompanyPaymentTypeRequestDTO dto, @MappingTarget CompanyPaymentType paymentType);
 
+    CompanyPaymentTypeDTO toDTO(CompanyPaymentType companyPaymentType);
 }

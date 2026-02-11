@@ -57,7 +57,7 @@ public class PayableService {
         Purchase purchase = purchaseRepository.findById(data.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not registered in the system", HttpStatus.NOT_FOUND));
 
-        if (purchase.getPaymentType().getIsImmediate()){
+        if (purchase.getCompanyPaymentType().getIsImmediate()){
             throw new PayableException("Cannot create payable for immediate payment purchases", HttpStatus.BAD_REQUEST);
         }
         LocalDate firstDueDate = LocalDate.now().plusDays(30);
@@ -129,7 +129,7 @@ public class PayableService {
         Purchase purchase = purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
-        if (purchase.getPaymentType().getIsImmediate() || !purchase.getPaymentType().getAllowsInstallments()){
+        if (purchase.getCompanyPaymentType().getIsImmediate() || !purchase.getCompanyPaymentType().getAllowsInstallments()){
             throw new PayableException("Cannot update payable for this payment method", HttpStatus.BAD_REQUEST);
         }
 

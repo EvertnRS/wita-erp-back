@@ -10,18 +10,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.transaction.dtos.OrderDTO;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.OrderItem;
-import org.wita.erp.domain.entities.transaction.order.dtos.*;
+import org.wita.erp.domain.entities.transaction.order.dtos.CreateOrderRequestDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.ProductInOrderDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.ProductOrderRequestDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.UpdateOrderRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.mappers.OrderMapper;
 import org.wita.erp.domain.entities.user.User;
-import org.wita.erp.domain.repositories.customer.CustomerRepository;
-import org.wita.erp.domain.repositories.payment.PaymentTypeRepository;
+import org.wita.erp.domain.repositories.payment.customer.CustomerPaymentTypeRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.transaction.order.OrderRepository;
@@ -43,9 +44,8 @@ import java.util.UUID;
 public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
-    private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
-    private final PaymentTypeRepository paymentTypeRepository;
+    private final CustomerPaymentTypeRepository customerPaymentTypeRepository;
     private final ProductRepository productRepository;
     private final MovementReasonRepository movementReasonRepository;
     private final ApplicationEventPublisher publisher;
@@ -71,13 +71,10 @@ public class OrderService {
         User seller = userRepository.findById(data.seller())
                 .orElseThrow(() -> new UserException("Seller not registered", HttpStatus.NOT_FOUND));
 
-        PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
+        CustomerPaymentType customerPaymentType = customerPaymentTypeRepository.findById(data.customerPaymentType())
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
-        if (!(paymentType instanceof CustomerPaymentType)) {
-            throw new OrderException("Invalid Payment Type for orders", HttpStatus.BAD_REQUEST);
-        }
 
-        if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && data.installments() != null){
+        if((!customerPaymentType.getAllowsInstallments() || customerPaymentType.getIsImmediate()) && data.installments() != null){
             throw new OrderException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
         }
 
@@ -94,7 +91,7 @@ public class OrderService {
         order.setDiscount(data.discount());
         order.setSeller(seller);
         order.setTransactionCode(data.transactionCode());
-        order.setPaymentType(paymentType);
+        order.setCustomerPaymentType(customerPaymentType);
         order.setInstallments(data.installments());
 
         for (ProductOrderRequestDTO itemData : data.products()) {
@@ -133,18 +130,16 @@ public class OrderService {
                     .orElseThrow(() -> new UserException("Seller not registered", HttpStatus.NOT_FOUND)));
         }
 
-        if (data.paymentType() != null) {
-            PaymentType paymentType = paymentTypeRepository.findById(data.paymentType())
+        if (data.customerPaymentType() != null) {
+            CustomerPaymentType customerPaymentType = customerPaymentTypeRepository.findById(data.customerPaymentType())
                     .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
-            if (!(paymentType instanceof CustomerPaymentType)) {
-                throw new OrderException("Invalid Payment Type for purchase", HttpStatus.BAD_REQUEST);
-            }
-            if((!paymentType.getAllowsInstallments() || paymentType.getIsImmediate()) && order.getInstallments() != null){
+
+            if((!customerPaymentType.getAllowsInstallments() || customerPaymentType.getIsImmediate()) && order.getInstallments() != null){
                 throw new OrderException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
 
             }
 
-            order.setPaymentType(paymentType);
+            order.setCustomerPaymentType(customerPaymentType);
         }
 
         if (data.transactionCode() != null && !data.transactionCode().equals(order.getTransactionCode())) {
