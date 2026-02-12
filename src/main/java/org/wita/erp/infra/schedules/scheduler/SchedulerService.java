@@ -11,5 +11,12 @@ public interface SchedulerService {
             String referenceId,
             LocalDateTime executeAt
     );
+
+    void cancel(ScheduledTaskTypes type,
+                String referenceId);
+
+    void reschedule(ScheduledTaskTypes type,
+                    String referenceId,
+                    LocalDateTime executeAt);
 }
 

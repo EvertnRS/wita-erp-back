@@ -22,6 +22,7 @@ import org.wita.erp.domain.repositories.transaction.purchase.PayableRepository;
 import org.wita.erp.domain.repositories.transaction.purchase.PurchaseRepository;
 import org.wita.erp.infra.exceptions.payable.PayableException;
 import org.wita.erp.infra.exceptions.purchase.PurchaseException;
+import org.wita.erp.infra.exceptions.receivable.ReceivableException;
 import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
 import org.wita.erp.infra.schedules.scheduler.SchedulerService;
 import org.wita.erp.services.transaction.purchase.observers.CreatePayablePurchaseObserver;
@@ -30,7 +31,6 @@ import org.wita.erp.services.transaction.purchase.observers.PayableCompensationO
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -64,47 +64,36 @@ public class PayableService {
         if (purchase.getCompanyPaymentType().getIsImmediate()){
             throw new PayableException("Cannot create payable for immediate payment purchases", HttpStatus.BAD_REQUEST);
         }
-        LocalDate firstDueDate = LocalDate.now().plusDays(30);
         BigDecimal installmentValue = purchase.getValue().divide(BigDecimal.valueOf(purchase.getInstallments()), 2, RoundingMode.HALF_UP);
+        int closingDay = purchase.getCompanyPaymentType().getClosingDay();
+        LocalDate baseDate = LocalDate.now();
 
         List<Payable> payables = new java.util.ArrayList<>(List.of());
 
         for (int i = 1; i <= purchase.getInstallments(); i++) {
+            LocalDate installmentMonth = baseDate.plusMonths(i);
+            int safeDay = Math.min(closingDay, installmentMonth.lengthOfMonth());
+            LocalDate dueDate = installmentMonth.withDayOfMonth(safeDay);
+
             Payable payable = new Payable();
             payable.setPurchase(purchase);
             payable.setPaymentStatus(data.paymentStatus());
-            payable.setDueDate(firstDueDate.plusDays(30L *i));
+            payable.setDueDate(dueDate);
             payable.setValue(installmentValue);
             payable.setInstallment(i);
+
             payableRepository.save(payable);
-
-            LocalDate dueDate = payable.getDueDate();
-            int closingDay = purchase.getCompanyPaymentType().getClosingDay();
-
-            LocalDate baseDate = dueDate;
-
-            if (dueDate.getDayOfMonth() > closingDay) {
-                baseDate = dueDate.plusMonths(1);
-            }
-
-            int lastDayOfMonth = baseDate.lengthOfMonth();
-            int safeDay = Math.min(closingDay, lastDayOfMonth);
-
-            LocalDate closingDate = baseDate.withDayOfMonth(safeDay);
-
-            LocalDateTime executeAt = closingDate.atStartOfDay();
-
 
             schedulerService.schedule(
                     ScheduledTaskTypes.PAYABLE_DUE_SOON,
                     payable.getId().toString(),
-                    executeAt.minusDays(3)
+                    payable.getDueDate().minusDays(3).atStartOfDay()
             );
 
             schedulerService.schedule(
                     ScheduledTaskTypes.PAYABLE_OVERDUE,
                     payable.getId().toString(),
-                    executeAt
+                    payable.getDueDate().atStartOfDay()
             );
 
             payables.add(payable);
@@ -120,6 +109,38 @@ public class PayableService {
     public ResponseEntity<PayableDTO> update(UUID id, UpdatePayableRequestDTO data) {
         Payable payable = payableRepository.findById(id)
                 .orElseThrow(() -> new PayableException("Payable not found", HttpStatus.NOT_FOUND));
+
+        PaymentStatus currentStatus = payable.getPaymentStatus();
+        PaymentStatus newStatus = data.paymentStatus();
+        LocalDate newDueDate = data.dueDate();
+
+        boolean statusChanging = newStatus != null && newStatus != currentStatus;
+        boolean dueDateChanging = newDueDate != null;
+
+        if (statusChanging && newStatus != PaymentStatus.PENDING && dueDateChanging) {
+            throw new ReceivableException(
+                    "Cannot update due date for non-pending payables",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        if (statusChanging && currentStatus == PaymentStatus.PENDING) {
+
+            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, id.toString());
+            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, id.toString());
+        }
+
+        if (statusChanging && newStatus == PaymentStatus.PENDING) {
+
+            scheduleTasks(payable.getId(),
+                    newDueDate != null ? newDueDate : payable.getDueDate());
+        }
+
+        if (!statusChanging && dueDateChanging
+                && currentStatus == PaymentStatus.PENDING) {
+
+            scheduleTasks(payable.getId(), newDueDate);
+        }
 
         payableMapper.updatePayableFromDTO(data, payable);
         payableRepository.save(payable);
@@ -171,9 +192,7 @@ public class PayableService {
         // Purchase installments updated
         if (purchase.getInstallments() != payables.size()) {
             payables.forEach(
-                    payable -> {
-                        this.delete(payable.getId());
-                    }
+                    payable -> this.delete(payable.getId())
             );
 
             this.save(new CreatePayableRequestDTO(
@@ -189,6 +208,23 @@ public class PayableService {
                         payable.setValue(purchase.getValue().divide(BigDecimal.valueOf(purchase.getInstallments()), 2, RoundingMode.HALF_UP));
                         payableRepository.save(payable);
                     });
+        }
+    }
+
+    private void scheduleTasks(UUID id, LocalDate dueDate) {
+
+        schedulerService.reschedule(
+                ScheduledTaskTypes.PAYABLE_OVERDUE,
+                id.toString(),
+                dueDate.atStartOfDay()
+        );
+
+        if (LocalDate.now().isBefore(dueDate.minusDays(3))) {
+            schedulerService.reschedule(
+                    ScheduledTaskTypes.PAYABLE_DUE_SOON,
+                    id.toString(),
+                    dueDate.minusDays(3).atStartOfDay()
+            );
         }
     }
 }

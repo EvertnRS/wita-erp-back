@@ -28,5 +28,24 @@ public class RedisDelayScheduler implements SchedulerService {
         redisTemplate.opsForZSet()
                 .add(KEY, value, score);
     }
+
+    @Override
+    public void cancel(ScheduledTaskTypes type,
+                       String referenceId) {
+
+        String value = type + ":" + referenceId;
+
+        redisTemplate.opsForZSet()
+                .remove(KEY, value);
+    }
+
+    @Override
+    public void reschedule(ScheduledTaskTypes type,
+                           String referenceId,
+                           LocalDateTime executeAt) {
+
+        cancel(type, referenceId);
+        schedule(type, referenceId, executeAt);
+    }
 }
 

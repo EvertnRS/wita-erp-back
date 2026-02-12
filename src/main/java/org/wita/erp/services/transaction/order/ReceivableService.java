@@ -66,16 +66,20 @@ public class ReceivableService {
             throw new PayableException("Cannot create receivable for immediate payment orders", HttpStatus.BAD_REQUEST);
         }
 
-        LocalDate firstDueDate = LocalDate.now().plusDays(30);
         BigDecimal installmentValue = order.getValue().divide(BigDecimal.valueOf(order.getInstallments()), 2, RoundingMode.HALF_UP);
+        LocalDate baseDate = LocalDate.now();
 
         List<Receivable> receivables = new java.util.ArrayList<>(List.of());
 
         for (int i = 1; i <= order.getInstallments(); i++) {
+            LocalDate installmentMonth = baseDate.plusMonths(i);
+            int safeDay = Math.min(installmentMonth.getDayOfMonth(), installmentMonth.lengthOfMonth());
+            LocalDate dueDate = installmentMonth.withDayOfMonth(safeDay);
+
             Receivable receivable = new Receivable();
             receivable.setOrder(order);
             receivable.setPaymentStatus(data.paymentStatus());
-            receivable.setDueDate(firstDueDate.plusDays(30L *i));
+            receivable.setDueDate(dueDate);
             receivable.setInstallment(i);
             receivable.setValue(installmentValue);
             receivableRepository.save(receivable);
@@ -106,6 +110,38 @@ public class ReceivableService {
     public ResponseEntity<ReceivableDTO> update(UUID id, UpdateReceivableRequestDTO data) {
         Receivable receivable = receivableRepository.findById(id)
                 .orElseThrow(() -> new ReceivableException("Receivable not found", HttpStatus.NOT_FOUND));
+
+        PaymentStatus currentStatus = receivable.getPaymentStatus();
+        PaymentStatus newStatus = data.paymentStatus();
+        LocalDate newDueDate = data.dueDate();
+
+        boolean statusChanging = newStatus != null && newStatus != currentStatus;
+        boolean dueDateChanging = newDueDate != null;
+
+        if (statusChanging && newStatus != PaymentStatus.PENDING && dueDateChanging) {
+            throw new ReceivableException(
+                    "Cannot update due date for non-pending receivables",
+                    HttpStatus.BAD_REQUEST
+            );
+        }
+
+        if (statusChanging && currentStatus == PaymentStatus.PENDING) {
+
+            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, id.toString());
+            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, id.toString());
+        }
+
+        if (statusChanging && newStatus == PaymentStatus.PENDING) {
+
+            scheduleTasks(receivable.getId(),
+                    newDueDate != null ? newDueDate : receivable.getDueDate());
+        }
+
+        if (!statusChanging && dueDateChanging
+                && currentStatus == PaymentStatus.PENDING) {
+
+            scheduleTasks(receivable.getId(), newDueDate);
+        }
 
         receivableMapper.updateReceivableFromDTO(data, receivable);
         receivableRepository.save(receivable);
@@ -157,9 +193,7 @@ public class ReceivableService {
         // Order installments updated
         if (order.getInstallments() != receivables.size()) {
             receivables.forEach(
-                    receivable -> {
-                        this.delete(receivable.getId());
-                    }
+                    receivable -> this.delete(receivable.getId())
             );
 
             this.save(new CreateReceivableRequestDTO(
@@ -177,4 +211,22 @@ public class ReceivableService {
                     });
         }
     }
+
+    private void scheduleTasks(UUID id, LocalDate dueDate) {
+
+        schedulerService.reschedule(
+                ScheduledTaskTypes.RECEIVABLE_OVERDUE,
+                id.toString(),
+                dueDate.atStartOfDay()
+        );
+
+        if (LocalDate.now().isBefore(dueDate.minusDays(3))) {
+            schedulerService.reschedule(
+                    ScheduledTaskTypes.RECEIVABLE_DUE_SOON,
+                    id.toString(),
+                    dueDate.minusDays(3).atStartOfDay()
+            );
+        }
+    }
+
 }
