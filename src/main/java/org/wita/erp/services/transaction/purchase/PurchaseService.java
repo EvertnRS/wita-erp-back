@@ -1,6 +1,6 @@
 package org.wita.erp.services.transaction.purchase;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -51,6 +51,7 @@ public class PurchaseService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher publisher;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<PurchaseDTO>> getAllPurchases(Pageable pageable, String searchTerm) {
         Page<Purchase> purchasePage;
 

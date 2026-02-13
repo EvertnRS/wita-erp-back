@@ -1,6 +1,6 @@
 package org.wita.erp.services.product;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
@@ -39,6 +39,7 @@ public class ProductService {
     private final SupplierRepository supplierRepository;
     private final SchedulerService schedulerService;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<Product>> getAllProducts(Pageable pageable, String searchTerm) {
         Page<Product> productPage;
 

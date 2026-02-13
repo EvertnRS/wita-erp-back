@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
 import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
@@ -25,6 +26,7 @@ public class TransactionService {
     private final OrderMapper orderMapper;
     private final PurchaseMapper purchaseMapper;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<TransactionDTO>> getAllTransactions(Pageable pageable, TransactionType transactionType) {
 
         if (transactionType == TransactionType.PURCHASE) {

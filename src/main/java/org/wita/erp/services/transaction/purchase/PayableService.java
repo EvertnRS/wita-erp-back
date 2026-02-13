@@ -1,6 +1,6 @@
 package org.wita.erp.services.transaction.purchase;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -44,7 +44,7 @@ public class PayableService {
     private final SchedulerService schedulerService;
     private final ApplicationEventPublisher publisher;
 
-
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<PayableDTO>> getAllPayable(Pageable pageable, String searchTerm) {
         Page<Payable> payablePage;
 

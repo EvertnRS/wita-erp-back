@@ -6,11 +6,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.dtos.CreateCategoryRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateCategoryRequestDTO;
-import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.domain.repositories.product.CategoryRepository;
+import org.wita.erp.infra.exceptions.product.CategoryException;
 
 import java.util.UUID;
 
@@ -19,6 +20,7 @@ import java.util.UUID;
 public class CategoryService {
     private final CategoryRepository categoryRepository;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<Category>> getAllCategories(Pageable pageable, String searchTerm) {
         Page<Category> categoryPage;
 

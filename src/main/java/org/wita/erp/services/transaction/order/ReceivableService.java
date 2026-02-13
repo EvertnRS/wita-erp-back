@@ -1,6 +1,6 @@
 package org.wita.erp.services.transaction.order;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -44,7 +44,7 @@ public class ReceivableService {
     private final SchedulerService schedulerService;
     private final ApplicationEventPublisher publisher;
 
-
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<ReceivableDTO>> getAllReceivable(Pageable pageable, String searchTerm) {
         Page<Receivable> receivablePage;
 

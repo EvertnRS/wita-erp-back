@@ -1,6 +1,6 @@
 package org.wita.erp.services.stock;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -65,6 +65,7 @@ public class StockService {
     private final PurchaseRepository purchaseRepository;
     private final ApplicationEventPublisher publisher;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<StockMovementDTO>> getAllStock(Pageable pageable, String searchTerm) {
         Page<StockMovement> stockPage;
 
