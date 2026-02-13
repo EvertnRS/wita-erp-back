@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.dtos.CreateMovementReasonRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateMovementReasonRequestDTO;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class MovementReasonService {
     private final MovementReasonRepository movementReasonRepository;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<MovementReason>> getAllMovementReason(Pageable pageable, String searchTerm) {
         Page<MovementReason> movementReasonPage;
 

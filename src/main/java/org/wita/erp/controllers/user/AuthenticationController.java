@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.user.dtos.*;
-import org.wita.erp.services.user.AuthenticationService;
+import org.wita.erp.services.user.authentication.AuthenticationService;
 import org.wita.erp.services.user.UserService;
 
 @RestController

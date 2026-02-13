@@ -7,7 +7,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
 import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
 import org.wita.erp.services.transaction.TransactionService;
@@ -28,7 +27,7 @@ public class TransactionController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ORDER_DELETE') and hasAuthority('PURCHASE_DELETE')")
-    public ResponseEntity<Transaction> delete(@PathVariable UUID id) {
+    public ResponseEntity<TransactionDTO> delete(@PathVariable UUID id) {
         return transactionService.delete(id);
     }
 }

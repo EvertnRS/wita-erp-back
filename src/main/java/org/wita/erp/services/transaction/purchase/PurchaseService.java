@@ -1,6 +1,6 @@
 package org.wita.erp.services.transaction.purchase;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -51,6 +51,7 @@ public class PurchaseService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher publisher;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<PurchaseDTO>> getAllPurchases(Pageable pageable, String searchTerm) {
         Page<Purchase> purchasePage;
 
@@ -304,9 +305,6 @@ public class PurchaseService {
     }
 
     private PurchaseItem createPurchaseItem(Product product, int quantity) {
-        if ((product.getQuantityInStock() - quantity) <= product.getMinQuantity()){
-            throw new ProductException("Not enough stock for product: " + product.getName(), HttpStatus.BAD_REQUEST);
-        }
         PurchaseItem purchaseItem = new PurchaseItem();
         purchaseItem.setProduct(product);
         purchaseItem.setQuantity(quantity);

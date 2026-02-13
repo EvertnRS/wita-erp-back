@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.user.dtos.CreateRoleRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UpdateRoleRequestDTO;
 import org.wita.erp.domain.entities.user.Role;
-import org.wita.erp.services.user.RoleService;
+import org.wita.erp.services.user.role.RoleService;
 
 @RestController
 @RequestMapping("/role")

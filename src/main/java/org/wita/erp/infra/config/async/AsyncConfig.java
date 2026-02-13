@@ -1,4 +1,4 @@
-package org.wita.erp.infra.config;
+package org.wita.erp.infra.config.async;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;

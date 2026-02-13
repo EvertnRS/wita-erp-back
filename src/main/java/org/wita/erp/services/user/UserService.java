@@ -1,6 +1,6 @@
 package org.wita.erp.services.user;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
@@ -21,7 +21,6 @@ import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.services.user.observers.RequestRecoveryObserver;
 import org.wita.erp.services.user.observers.ResetPasswordObserver;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -33,6 +32,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<UserDTO>> getAllUsers(Pageable pageable, String searchTerm) {
         Page<User> userPage;
 
