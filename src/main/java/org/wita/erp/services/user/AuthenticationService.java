@@ -11,10 +11,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.wita.erp.domain.entities.user.dtos.AuthenticationDTO;
-import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
-import org.wita.erp.domain.entities.user.dtos.RequestRecoveryDTO;
-import org.wita.erp.domain.entities.user.dtos.RequestResetDTO;
+import org.wita.erp.domain.entities.user.dtos.*;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.user.UserRepository;
@@ -53,7 +50,7 @@ public class AuthenticationService {
         return ResponseEntity.ok(new LoginResponseDTO(userMapper.toUserDTO(user), token));
     }
 
-    public ResponseEntity<String> requestRecovery(RequestRecoveryDTO data, String userAgent) throws MessagingException {
+    public ResponseEntity<RecoveryDTO> requestRecovery(RequestRecoveryDTO data, String userAgent) throws MessagingException {
         User user = userRepository.findByEmail(data.email())
                 .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
 
@@ -79,10 +76,10 @@ public class AuthenticationService {
 
         publisher.publishEvent(new RequestRecoveryObserver(user, encodedToken, expiresAt));
 
-        return ResponseEntity.ok("Reset link sent");
+        return ResponseEntity.ok(new RecoveryDTO("A password recovery email has been sent to " + data.email() + " if it is registered in our system. The link will expire in 15 minutes."));
     }
 
-    public ResponseEntity<String> resetPassword(RequestResetDTO data, String token){
+    public ResponseEntity<RecoveryDTO> resetPassword(RequestResetDTO data, String token){
         List<User> users = userRepository.findAllByResetTokenIsNotNull();
 
         User user = users.stream()
@@ -97,7 +94,7 @@ public class AuthenticationService {
 
         publisher.publishEvent(new ResetPasswordObserver(user, data.password()));
 
-        return ResponseEntity.ok("Password reset successfully");
+        return ResponseEntity.ok(new RecoveryDTO("Password reset successfully"));
     }
 
     private String getBrowserInfo(String userAgent) {

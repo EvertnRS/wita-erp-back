@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.controllers.user.docs.AuthenticationDocs;
 import org.wita.erp.domain.entities.user.dtos.*;
 import org.wita.erp.services.user.AuthenticationService;
 import org.wita.erp.services.user.UserService;
@@ -13,7 +14,7 @@ import org.wita.erp.services.user.UserService;
 @RestController
 @RequestMapping("auth")
 @RequiredArgsConstructor
-public class AuthenticationController {
+public class AuthenticationController implements AuthenticationDocs {
     private final UserService userService;
     private final AuthenticationService authenticationService;
 
@@ -23,12 +24,12 @@ public class AuthenticationController {
     }
 
     @PostMapping("/recovery")
-    public ResponseEntity<String> requestRecovery(@RequestBody @Valid RequestRecoveryDTO data, @RequestHeader(value = "User-Agent", required = false) String userAgent) throws MessagingException {
+    public ResponseEntity<RecoveryDTO> requestRecovery(@RequestBody @Valid RequestRecoveryDTO data, @RequestHeader(value = "User-Agent", required = false) String userAgent) throws MessagingException {
         return authenticationService.requestRecovery(data, userAgent);
     }
 
     @PostMapping("/reset")
-    public ResponseEntity<String> resetPassword(@RequestBody @Valid RequestResetDTO data, @RequestParam("token") String token){
+    public ResponseEntity<RecoveryDTO> resetPassword(@RequestBody @Valid RequestResetDTO data, @RequestParam("token") String token){
         return authenticationService.resetPassword(data, token);
     }
 

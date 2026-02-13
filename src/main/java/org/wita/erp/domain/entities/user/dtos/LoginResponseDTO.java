@@ -1,4 +1,9 @@
 package org.wita.erp.domain.entities.user.dtos;
 
-public record LoginResponseDTO(UserDTO user, String token) {
+import io.swagger.v3.oas.annotations.media.Schema;
+
+public record LoginResponseDTO(
+        UserDTO user,
+        @Schema(description = "JWT token for authenticated access", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        String token) {
 }
