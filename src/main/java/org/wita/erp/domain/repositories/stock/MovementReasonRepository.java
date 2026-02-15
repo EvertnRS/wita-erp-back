@@ -10,7 +10,8 @@ import java.util.UUID;
 
 public interface MovementReasonRepository extends JpaRepository <MovementReason, UUID> {
     @Query("SELECT m FROM MovementReason m WHERE " +
-            "(LOWER(m.reason) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+            "(LOWER(m.reason) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
+            "LOWER(CAST(m.id AS STRING)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<MovementReason> findBySearchTerm(String searchTerm, Pageable pageable);
 
     MovementReason findByReason(String reason);

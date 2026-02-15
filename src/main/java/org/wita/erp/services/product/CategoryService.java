@@ -1,17 +1,23 @@
 package org.wita.erp.services.product;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.dtos.CreateCategoryRequestDTO;
+import org.wita.erp.domain.entities.product.dtos.DeleteCategoryRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateCategoryRequestDTO;
 import org.wita.erp.domain.repositories.product.CategoryRepository;
 import org.wita.erp.infra.exceptions.product.CategoryException;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.product.observers.CategorySoftDeleteObserver;
 
 import java.util.UUID;
 
@@ -19,6 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
     public ResponseEntity<Page<Category>> getAllCategories(Pageable pageable, String searchTerm) {
@@ -59,12 +66,26 @@ public class CategoryService {
         return ResponseEntity.ok(category);
     }
 
-    // FIXME: O que acontece com os produtos que tem a categoria que está sendo desativada?
-    public ResponseEntity<Category> delete(UUID id) {
+    public ResponseEntity<Category> delete(UUID id, DeleteCategoryRequestDTO data) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryException("Category not found", HttpStatus.NOT_FOUND));
         category.setActive(false);
+
         categoryRepository.save(category);
+
+        this.auditCategorySoftDelete(id, data.reason());
+        this.categoryCascadeDelete(id);
+
         return ResponseEntity.ok(category);
+    }
+
+    @Async
+    public void auditCategorySoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.CATEGORY.getEntityType(), reason));
+    }
+
+    @Async
+    public void categoryCascadeDelete(UUID id){
+        publisher.publishEvent(new CategorySoftDeleteObserver(id));
     }
 }

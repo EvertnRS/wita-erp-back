@@ -8,6 +8,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 import org.wita.erp.services.transaction.order.ReceivableService;
@@ -40,7 +41,7 @@ public class ReceivableController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('RECEIVABLE_DELETE')")
-    public ResponseEntity<ReceivableDTO> delete(@PathVariable UUID id) {
-        return receivableService.delete(id);
+    public ResponseEntity<ReceivableDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteReceivableRequestDTO data) {
+        return receivableService.delete(id, data);
     }
 }

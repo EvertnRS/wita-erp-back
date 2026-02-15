@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
+import org.wita.erp.domain.entities.product.dtos.DeleteProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.services.product.ProductService;
@@ -41,7 +42,7 @@ public class ProductController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
-    public ResponseEntity<Product> delete(@PathVariable UUID id) {
-        return productService.delete(id);
+    public ResponseEntity<Product> delete(@PathVariable UUID id, @RequestBody @Valid DeleteProductRequestDTO data) {
+        return productService.delete(id, data);
     }
 }

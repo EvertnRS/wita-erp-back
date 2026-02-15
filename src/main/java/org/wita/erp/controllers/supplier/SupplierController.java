@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.supplier.dtos.CreateSupplierRequestDTO;
+import org.wita.erp.domain.entities.supplier.dtos.DeleteSupplierRequestDTO;
 import org.wita.erp.domain.entities.supplier.dtos.UpdateSupplierRequestDTO;
 import org.wita.erp.services.supplier.SupplierService;
 
@@ -41,7 +42,7 @@ public class SupplierController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('SUPPLIER_DELETE')")
-    public ResponseEntity<Supplier> delete(@PathVariable UUID id) {
-        return supplierService.delete(id);
+    public ResponseEntity<Supplier> delete(@PathVariable UUID id, @RequestBody @Valid DeleteSupplierRequestDTO data) {
+        return supplierService.delete(id, data);
     }
 }

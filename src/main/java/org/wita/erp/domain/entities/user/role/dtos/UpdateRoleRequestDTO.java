@@ -1,4 +1,4 @@
-package org.wita.erp.domain.entities.user.dtos;
+package org.wita.erp.domain.entities.user.role.dtos;
 
 import java.util.Set;
 

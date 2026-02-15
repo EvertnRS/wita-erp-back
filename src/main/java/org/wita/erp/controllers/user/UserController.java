@@ -8,9 +8,9 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.domain.entities.user.dtos.DeleteUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UserDTO;
-
 import org.wita.erp.services.user.UserService;
 
 import java.util.UUID;
@@ -35,7 +35,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_DELETE')")
-    public ResponseEntity<UserDTO> delete(@PathVariable UUID id) {
-        return userService.delete(id);
+    public ResponseEntity<UserDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteUserRequestDTO data) {
+        return userService.delete(id, data);
     }
 }

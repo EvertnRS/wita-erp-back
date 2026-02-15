@@ -1,6 +1,5 @@
 package org.wita.erp.services.transaction.purchase;
 
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -10,6 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
@@ -32,10 +35,16 @@ import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
 import org.wita.erp.infra.exceptions.user.UserException;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.payment.company.observers.CompanyPaymentTypeSoftDeleteObserver;
 import org.wita.erp.services.stock.observers.StockCompensationPurchaseObserver;
+import org.wita.erp.services.supplier.observers.SupplierSoftDeleteObserver;
+import org.wita.erp.services.transaction.observers.TransactionSoftDeleteObserver;
 import org.wita.erp.services.transaction.purchase.observers.*;
+import org.wita.erp.services.user.observers.UserSoftDeleteObserver;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -217,11 +226,15 @@ public class PurchaseService {
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
 
-    public ResponseEntity<PurchaseDTO> delete(UUID id) {
+    public ResponseEntity<PurchaseDTO> delete(UUID id, DeletePurchaseRequestDTO data) {
         Purchase purchase = purchaseRepository.findById(id)
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
         purchase.setActive(false);
         purchaseRepository.save(purchase);
+
+        this.auditPurchaseSoftDelete(id, data.reason());
+        this.purchaseCascadeDelete(id);
+
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
 
@@ -319,7 +332,7 @@ public class PurchaseService {
         purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
-        this.delete(event.purchase());
+        this.delete(event.purchase(), new DeletePurchaseRequestDTO("Stock compensation for purchase " + event.purchase()));
     }
 
     @EventListener
@@ -328,7 +341,57 @@ public class PurchaseService {
         purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
-        this.delete(event.purchase());
+        this.delete(event.purchase(), new DeletePurchaseRequestDTO("Payable compensation for purchase " + event.purchase()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onTransactionSoftDelete(TransactionSoftDeleteObserver event) {
+        if(purchaseRepository.findById(event.transaction()).isPresent()){
+            this.delete(event.transaction(), new DeletePurchaseRequestDTO(event.reason()));
+        }
+    }
+
+    @EventListener
+    public void onUserSoftDelete(UserSoftDeleteObserver event) {
+        List<UUID> purchaseIds = purchaseRepository.cascadeDeleteFromUser(event.user());
+        if(!purchaseIds.isEmpty()){
+            for (UUID purchaseId : purchaseIds) {
+                this.auditPurchaseSoftDelete(purchaseId, "Cascade delete from user " + event.user());
+                this.purchaseCascadeDelete(purchaseId);
+            }
+        }
+    }
+
+    @EventListener
+    public void onSupplierSoftDelete(SupplierSoftDeleteObserver event) {
+        List<UUID> purchaseIds = purchaseRepository.cascadeDeleteFromSupplier(event.supplier());
+        if(!purchaseIds.isEmpty()){
+            for (UUID purchaseId : purchaseIds) {
+                this.auditPurchaseSoftDelete(purchaseId, "Cascade delete from supplier " + event.supplier());
+                this.purchaseCascadeDelete(purchaseId);
+            }
+        }
+    }
+
+    @EventListener
+    public void onCompanyPaymentTypeSoftDelete(CompanyPaymentTypeSoftDeleteObserver event) {
+        List<UUID> purchaseIds = purchaseRepository.cascadeDeleteFromCompanyPaymentType(event.companyPaymentType());
+        if(!purchaseIds.isEmpty()){
+            for (UUID purchaseId : purchaseIds) {
+                this.auditPurchaseSoftDelete(purchaseId, "Cascade delete from company payment type " + event.companyPaymentType());
+                this.purchaseCascadeDelete(purchaseId);
+            }
+        }
+    }
+
+    @Async
+    public void auditPurchaseSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.TRANSACTION.getEntityType(), reason));
+    }
+
+    @Async
+    public void purchaseCascadeDelete(UUID id){
+        publisher.publishEvent(new PurchaseSoftDeleteObserver(id));
     }
 
 }

@@ -1,20 +1,23 @@
 package org.wita.erp.services.transaction.order;
 
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.status.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.Receivable;
 import org.wita.erp.domain.entities.transaction.order.dtos.CreateReceivableRequestDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.mappers.ReceivableMapper;
@@ -25,7 +28,9 @@ import org.wita.erp.infra.exceptions.payable.PayableException;
 import org.wita.erp.infra.exceptions.receivable.ReceivableException;
 import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
 import org.wita.erp.infra.schedules.scheduler.SchedulerService;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
 import org.wita.erp.services.transaction.order.observers.CreateReceivableOrderObserver;
+import org.wita.erp.services.transaction.order.observers.OrderSoftDeleteObserver;
 import org.wita.erp.services.transaction.order.observers.ReceivableCompensationObserver;
 
 import java.math.BigDecimal;
@@ -149,16 +154,18 @@ public class ReceivableService {
         return ResponseEntity.ok(receivableMapper.toDTO(receivable));
     }
 
-    public ResponseEntity<ReceivableDTO> delete(UUID id) {
+    public ResponseEntity<ReceivableDTO> delete(UUID id, DeleteReceivableRequestDTO data) {
         Receivable receivable = receivableRepository.findById(id)
                 .orElseThrow(() -> new PayableException("Receivable not found", HttpStatus.NOT_FOUND));
         receivable.setActive(false);
         receivableRepository.save(receivable);
+
+        this.auditReceivableSoftDelete(id, data.reason());
+
         return ResponseEntity.ok(receivableMapper.toDTO(receivable));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
     @Async
     public void onReceivableOrderCreated(CreateReceivableOrderObserver event) {
         try{
@@ -179,7 +186,6 @@ public class ReceivableService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
     public void onReceivableOrderUpdated(CreateReceivableOrderObserver event) {
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
@@ -193,8 +199,8 @@ public class ReceivableService {
         // Order installments updated
         if (order.getInstallments() != receivables.size()) {
             receivables.forEach(
-                    receivable -> this.delete(receivable.getId())
-            );
+                    receivable -> this.delete(receivable.getId(), new DeleteReceivableRequestDTO("Order installments updated")
+            ));
 
             this.save(new CreateReceivableRequestDTO(
                     PaymentStatus.PENDING,
@@ -227,6 +233,24 @@ public class ReceivableService {
                     dueDate.minusDays(3).atStartOfDay()
             );
         }
+    }
+
+    @EventListener
+    public void onOrderSoftDelete(OrderSoftDeleteObserver event) {
+        List<UUID> receivableIds = receivableRepository.cascadeDeleteFromOrder(event.order());
+        if(!receivableIds.isEmpty()){
+            for (UUID receivableId : receivableIds) {
+                this.auditReceivableSoftDelete(receivableId, "Cascade delete from order " + event.order());
+
+                schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, receivableId.toString());
+                schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, receivableId.toString());
+            }
+        }
+    }
+
+    @Async
+    public void auditReceivableSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.RECEIVABLE.getEntityType(), reason));
     }
 
 }

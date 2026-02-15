@@ -82,7 +82,10 @@ INSERT INTO permission (name, description) VALUES
 ('PAYABLE_DELETE', 'Remover contas a pagar'),
 
 -- Contas a receber
-('RECEIVABLE_READ', 'Visualizar contas a pagar'),
-('RECEIVABLE_CREATE', 'Criar contas a pagar'),
-('RECEIVABLE_UPDATE', 'Atualizar contas a pagar'),
-('RECEIVABLE_DELETE', 'Remover contas a pagar');
+('RECEIVABLE_READ', 'Visualizar contas a receber'),
+('RECEIVABLE_CREATE', 'Criar contas a receber'),
+('RECEIVABLE_UPDATE', 'Atualizar contas a receber'),
+('RECEIVABLE_DELETE', 'Remover contas a receber'),
+
+-- Histórico de exclusão de registros
+('DELETE_LOG_READ', 'Visualizar histórico de exclusão de registros');

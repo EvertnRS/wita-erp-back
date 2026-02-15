@@ -1,4 +1,4 @@
-package org.wita.erp.domain.entities.user;
+package org.wita.erp.domain.entities.user.role;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

@@ -10,6 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.dtos.CreateMovementReasonRequestDTO;
+import org.wita.erp.domain.entities.stock.dtos.DeleteMovementReasonRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateMovementReasonRequestDTO;
 import org.wita.erp.services.stock.MovementReasonService;
 
@@ -41,7 +42,7 @@ public class MovementReasonController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('REASON_DELETE')")
-    public ResponseEntity<MovementReason> delete(@PathVariable UUID id) {
-        return movementReasonService.delete(id);
+    public ResponseEntity<MovementReason> delete(@PathVariable UUID id, @RequestBody @Valid DeleteMovementReasonRequestDTO data) {
+        return movementReasonService.delete(id, data);
     }
 }

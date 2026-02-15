@@ -9,6 +9,5 @@ public record CreateStockRequestDTO(@NotNull UUID product,
                                     @NotNull Integer quantity,
                                     @NotNull UUID movementReason,
                                     @NotNull UUID transaction,
-                                    @NotNull UUID user,
                                     @NotNull StockMovementType movementType) {
 }

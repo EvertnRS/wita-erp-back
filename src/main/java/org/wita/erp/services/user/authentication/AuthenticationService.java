@@ -20,8 +20,8 @@ import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.infra.providers.auth.AuthProvider;
 import org.wita.erp.infra.providers.email.EmailProvider;
-import org.wita.erp.services.user.observers.RequestRecoveryObserver;
-import org.wita.erp.services.user.observers.ResetPasswordObserver;
+import org.wita.erp.services.user.authentication.observers.RequestRecoveryObserver;
+import org.wita.erp.services.user.authentication.observers.ResetPasswordObserver;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

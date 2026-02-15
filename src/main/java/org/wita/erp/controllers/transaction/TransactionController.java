@@ -1,5 +1,6 @@
 package org.wita.erp.controllers.transaction;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.domain.entities.transaction.TransactionType;
+import org.wita.erp.domain.entities.transaction.dtos.DeleteTransactionRequestDTO;
 import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
 import org.wita.erp.services.transaction.TransactionService;
 
@@ -27,7 +29,7 @@ public class TransactionController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ORDER_DELETE') and hasAuthority('PURCHASE_DELETE')")
-    public ResponseEntity<TransactionDTO> delete(@PathVariable UUID id) {
-        return transactionService.delete(id);
+    public ResponseEntity<TransactionDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteTransactionRequestDTO data) {
+        return transactionService.delete(id, data);
     }
 }

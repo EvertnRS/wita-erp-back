@@ -65,7 +65,7 @@ public class PurchaseController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('PURCHASE_DELETE')")
-    public ResponseEntity<PurchaseDTO> delete(@PathVariable UUID id) {
-        return purchaseService.delete(id);
+    public ResponseEntity<PurchaseDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeletePurchaseRequestDTO data) {
+        return purchaseService.delete(id, data);
     }
 }

@@ -1,18 +1,24 @@
 package org.wita.erp.services.supplier;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.supplier.dtos.CreateSupplierRequestDTO;
+import org.wita.erp.domain.entities.supplier.dtos.DeleteSupplierRequestDTO;
 import org.wita.erp.domain.entities.supplier.dtos.UpdateSupplierRequestDTO;
 import org.wita.erp.domain.entities.supplier.mappers.SupplierMapper;
 import org.wita.erp.domain.repositories.supplier.SupplierRepository;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.supplier.observers.SupplierSoftDeleteObserver;
 
 import java.util.UUID;
 
@@ -21,6 +27,7 @@ import java.util.UUID;
 public class SupplierService {
     private final SupplierRepository supplierRepository;
     private final SupplierMapper supplierMapper;
+    private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
     public ResponseEntity<Page<Supplier>> getAllSuppliers(Pageable pageable, String searchTerm) {
@@ -61,11 +68,26 @@ public class SupplierService {
         return ResponseEntity.ok(supplier);
     }
 
-    public ResponseEntity<Supplier> delete(UUID id) {
+    public ResponseEntity<Supplier> delete(UUID id, DeleteSupplierRequestDTO data) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new SupplierException("Supplier not found", HttpStatus.NOT_FOUND));
         supplier.setActive(false);
         supplierRepository.save(supplier);
+
+        this.auditSupplierSoftDelete(id, data.reason());
+        this.supplierCascadeDelete(supplier.getId());
+
         return ResponseEntity.ok(supplier);
     }
+
+    @Async
+    public void auditSupplierSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.SUPPLIER.getEntityType(), reason));
+    }
+
+    @Async
+    public void supplierCascadeDelete(UUID id){
+        publisher.publishEvent(new SupplierSoftDeleteObserver(id));
+    }
+
 }

@@ -8,6 +8,5 @@ import java.util.UUID;
 public record UpdateStockRequestDTO(UUID product,
                                     @Positive Integer quantity,
                                     UUID movementReason,
-                                    UUID transaction,
-                                    UUID user) {
+                                    UUID transaction) {
 }

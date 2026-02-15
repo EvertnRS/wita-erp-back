@@ -1,20 +1,23 @@
 package org.wita.erp.services.transaction.purchase;
 
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.status.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.purchase.Payable;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.CreatePayableRequestDTO;
+import org.wita.erp.domain.entities.transaction.purchase.dtos.DeletePayableRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.mappers.PayableMapper;
@@ -25,8 +28,10 @@ import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.receivable.ReceivableException;
 import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
 import org.wita.erp.infra.schedules.scheduler.SchedulerService;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
 import org.wita.erp.services.transaction.purchase.observers.CreatePayablePurchaseObserver;
 import org.wita.erp.services.transaction.purchase.observers.PayableCompensationObserver;
+import org.wita.erp.services.transaction.purchase.observers.PurchaseSoftDeleteObserver;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -148,16 +153,19 @@ public class PayableService {
         return ResponseEntity.ok(payableMapper.toDTO(payable));
     }
 
-    public ResponseEntity<PayableDTO> delete(UUID id) {
+    public ResponseEntity<PayableDTO> delete(UUID id, DeletePayableRequestDTO data) {
         Payable payable = payableRepository.findById(id)
                 .orElseThrow(() -> new PayableException("Payable not found", HttpStatus.NOT_FOUND));
         payable.setActive(false);
+
         payableRepository.save(payable);
+
+        this.auditPayableSoftDelete(id, data.reason());
+
         return ResponseEntity.ok(payableMapper.toDTO(payable));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
     @Async
     public void onPayablePurchaseCreated(CreatePayablePurchaseObserver event) {
         try{
@@ -178,7 +186,6 @@ public class PayableService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
     public void onPayablePurchaseUpdated(CreatePayablePurchaseObserver event) {
         Purchase purchase = purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
@@ -192,8 +199,8 @@ public class PayableService {
         // Purchase installments updated
         if (purchase.getInstallments() != payables.size()) {
             payables.forEach(
-                    payable -> this.delete(payable.getId())
-            );
+                    payable -> this.delete(payable.getId(), new DeletePayableRequestDTO("Purchases installments updated")
+            ));
 
             this.save(new CreatePayableRequestDTO(
                     PaymentStatus.PENDING,
@@ -226,5 +233,23 @@ public class PayableService {
                     dueDate.minusDays(3).atStartOfDay()
             );
         }
+    }
+
+    @EventListener
+    public void onPurchaseSoftDelete(PurchaseSoftDeleteObserver event) {
+        List<UUID> payableIds = payableRepository.cascadeDeleteFromPurchase(event.purchase());
+        if(!payableIds.isEmpty()){
+            for (UUID payableId : payableIds) {
+                this.auditPayableSoftDelete(payableId, "Cascade delete from purchase " + event.purchase());
+
+                schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, payableId.toString());
+                schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, payableId.toString());
+            }
+        }
+    }
+
+    @Async
+    public void auditPayableSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.PAYABLE.getEntityType(), reason));
     }
 }
