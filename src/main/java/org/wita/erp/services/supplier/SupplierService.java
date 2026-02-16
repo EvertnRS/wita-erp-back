@@ -1,17 +1,19 @@
 package org.wita.erp.services.supplier;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.supplier.dtos.CreateSupplierRequestDTO;
 import org.wita.erp.domain.entities.supplier.dtos.SupplierDTO;
 import org.wita.erp.domain.entities.supplier.dtos.UpdateSupplierRequestDTO;
 import org.wita.erp.domain.entities.supplier.mappers.SupplierMapper;
-import org.wita.erp.infra.exceptions.supplier.SupplierException;
 import org.wita.erp.domain.repositories.supplier.SupplierRepository;
+import org.wita.erp.infra.exceptions.supplier.SupplierException;
 
 import java.util.UUID;
 
@@ -21,6 +23,7 @@ public class SupplierService {
     private final SupplierRepository supplierRepository;
     private final SupplierMapper supplierMapper;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<SupplierDTO>> getAllSuppliers(Pageable pageable, String searchTerm) {
         Page<Supplier> supplierPage;
 

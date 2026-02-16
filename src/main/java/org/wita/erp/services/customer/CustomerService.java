@@ -6,14 +6,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.CustomerDTO;
 import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.mappers.CustomerMapper;
-import org.wita.erp.infra.exceptions.customer.CustomerException;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
-
+import org.wita.erp.infra.exceptions.customer.CustomerException;
 
 import java.util.UUID;
 
@@ -23,6 +23,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<CustomerDTO>> getAllCustomers(Pageable pageable, String searchTerm) {
         Page<Customer> customerPage;
 

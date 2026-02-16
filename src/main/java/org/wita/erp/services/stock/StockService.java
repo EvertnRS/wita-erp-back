@@ -1,6 +1,7 @@
 package org.wita.erp.services.stock;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -65,6 +66,7 @@ public class StockService {
     private final PurchaseRepository purchaseRepository;
     private final ApplicationEventPublisher publisher;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<StockMovementDTO>> getAllStock(Pageable pageable, String searchTerm) {
         Page<StockMovement> stockPage;
 
@@ -178,7 +180,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Async
     public void onOrderCreated(CreateOrderObserver event) {
         try{
@@ -200,7 +202,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @Async
     public void onPurchaseCreated(CreatePurchaseObserver event) {
         try{
@@ -222,7 +224,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onOrderUpdated(UpdateOrderObserver event) {
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
@@ -238,7 +240,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onPurchaseUpdated(UpdatePurchaseObserver event) {
 
         Purchase purchase = purchaseRepository.findById(event.purchase())
@@ -255,7 +257,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAddItemInOrder(AddProductInOrderObserver event) {
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
@@ -275,7 +277,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onRemoveItemInOrder(RemoveProductInOrderObserver event) {
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
@@ -295,7 +297,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAddItemInPurchase(AddProductInPurchaseObserver event) {
         Purchase purchase = purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
@@ -315,7 +317,7 @@ public class StockService {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onRemoveItemInPurchase(RemoveProductInPurchaseObserver event) {
         Purchase purchase = purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));

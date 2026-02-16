@@ -1,4 +1,4 @@
-package org.wita.erp.services.user;
+package org.wita.erp.services.user.role;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

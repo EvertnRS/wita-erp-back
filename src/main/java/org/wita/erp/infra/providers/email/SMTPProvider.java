@@ -2,7 +2,6 @@ package org.wita.erp.infra.providers.email;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -17,9 +16,6 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class SMTPProvider implements EmailProvider {
     private final JavaMailSender mailSender;
-
-    @Getter
-    private final String baseTemplate = loadTemplate();
 
     @Value("${spring.mail.username}")
     private String email;
@@ -37,9 +33,9 @@ public class SMTPProvider implements EmailProvider {
         mailSender.send(message);
     }
 
-    public String buildTemplate(String title, String message, String agentName, String deviceClass,
+    public String buildRecoveryPasswordTemplate(String title, String message, String agentName, String deviceClass,
                                 String userName, String dateTime, String buttonText, String buttonUrl) {
-        String template = baseTemplate;
+        String template = loadTemplate("/templates/recoveryPasswordTemplate.html");
         template = template.replace("{{TITLE}}", title);
         template = template.replace("{{MESSAGE}}", message);
         template = template.replace("{{AGENT_NAME}}", agentName);
@@ -52,9 +48,39 @@ public class SMTPProvider implements EmailProvider {
         return template;
     }
 
+    public String buildOverdueTransactionTemplate(String title, String message, String sellerName, String buyerName,
+                                                String value, String dateTime, String buttonText, String buttonUrl) {
+        String template = loadTemplate("/templates/overduePaymentTemplate.html");
+        template = template.replace("{{TITLE}}", title);
+        template = template.replace("{{MESSAGE}}", message);
+        template = template.replace("{{SELLER_NAME}}", sellerName);
+        template = template.replace("{{BUYER_NAME}}", buyerName);
+        template = template.replace("{{VALUE}}", value);
+        template = template.replace("{{DATETIME}}", dateTime);
+        template = template.replace("{{BUTTON_TEXT}}", buttonText);
+        template = template.replace("{{BUTTON_URL}}", buttonUrl);
 
-    private String loadTemplate() {
-        try (InputStream is = getClass().getResourceAsStream("/templates/template.html")) {
+        return template;
+    }
+
+    public String buildProductReplenishmentTemplate(String title, String message, String productName, String quantity,
+                                                  String categoryName, String supplierName, String buttonText, String buttonUrl) {
+        String template = loadTemplate("/templates/productReplenishmentTemplate.html");
+        template = template.replace("{{TITLE}}", title);
+        template = template.replace("{{MESSAGE}}", message);
+        template = template.replace("{{PRODUCT_NAME}}", productName);
+        template = template.replace("{{QUANTITY}}", quantity);
+        template = template.replace("{{CATEGORY_NAME}}", categoryName);
+        template = template.replace("{{SUPPLIER_NAME}}", supplierName);
+        template = template.replace("{{BUTTON_TEXT}}", buttonText);
+        template = template.replace("{{BUTTON_URL}}", buttonUrl);
+
+        return template;
+    }
+
+
+    private String loadTemplate(String path) {
+        try (InputStream is = getClass().getResourceAsStream(path)) {
             assert is != null;
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {

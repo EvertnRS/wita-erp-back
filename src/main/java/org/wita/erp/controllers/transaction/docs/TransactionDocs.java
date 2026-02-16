@@ -38,7 +38,7 @@ public interface TransactionDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have ORDER_DELETE and PURCHASE_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Transaction not found", content = @Content)
     })
-    ResponseEntity<Transaction> delete(@Parameter(description = "UUID of the transaction to remove", example = "123e4567-e89b-12d3-a456-426614174000")
+    ResponseEntity<TransactionDTO> delete(@Parameter(description = "UUID of the transaction to remove", example = "123e4567-e89b-12d3-a456-426614174000")
                                              UUID id);
 
 }

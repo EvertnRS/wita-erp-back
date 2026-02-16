@@ -29,7 +29,7 @@ public class TransactionController implements TransactionDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ORDER_DELETE') and hasAuthority('PURCHASE_DELETE')")
-    public ResponseEntity<Transaction> delete(@PathVariable UUID id) {
+    public ResponseEntity<TransactionDTO> delete(@PathVariable UUID id) {
         return transactionService.delete(id);
     }
 }

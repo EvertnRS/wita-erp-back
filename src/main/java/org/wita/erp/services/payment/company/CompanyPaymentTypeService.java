@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
@@ -27,6 +28,7 @@ public class CompanyPaymentTypeService {
     private final PaymentTypeService paymentTypeService;
     private final CompanyPaymentTypeRepository companyPaymentTypeRepository;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<CompanyPaymentTypeDTO>> getAllCompanyPaymentTypes(Pageable pageable) {
         Page<CompanyPaymentType> companyPaymentTypePage = companyPaymentTypeRepository.findAll(pageable);
 
@@ -53,7 +55,7 @@ public class CompanyPaymentTypeService {
         companyPaymentType.setAgencyNumber(data.agencyNumber());
         companyPaymentType.setAccountNumber(data.accountNumber());
 
-        if (data.allowsInstallments() && !data.isImmediate()) {
+        if(data.allowsInstallments() && !data.isImmediate()){
             companyPaymentType.setLastFourDigits(data.lastFourDigits());
             companyPaymentType.setBrand(data.brand());
             companyPaymentType.setClosingDay(data.closingDay());

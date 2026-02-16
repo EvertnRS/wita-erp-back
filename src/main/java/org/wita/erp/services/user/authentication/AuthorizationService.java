@@ -1,4 +1,4 @@
-package org.wita.erp.services.user;
+package org.wita.erp.services.user.authentication;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

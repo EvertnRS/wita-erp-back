@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
@@ -30,6 +31,7 @@ public class CustomerPaymentTypeService {
     private final CustomerRepository customerRepository;
     private final CustomerPaymentTypeRepository customerPaymentTypeRepository;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<CustomerPaymentTypeDTO>> getAllCustomerPaymentTypes(Pageable pageable, String searchTerm) {
         Page<CustomerPaymentType> customerPaymentTypePage;
 

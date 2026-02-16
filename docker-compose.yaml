@@ -9,5 +9,13 @@ services:
       - pgdata:/var/lib/postgres/wita
     ports:
       - "5432:5432"
+
+  redis:
+    image: redis:7
+    container_name: redis-local
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+
 volumes:
   pgdata:

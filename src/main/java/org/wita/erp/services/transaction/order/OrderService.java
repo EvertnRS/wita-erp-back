@@ -1,6 +1,6 @@
 package org.wita.erp.services.transaction.order;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -50,6 +50,7 @@ public class OrderService {
     private final MovementReasonRepository movementReasonRepository;
     private final ApplicationEventPublisher publisher;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<OrderDTO>> getAllOrders(Pageable pageable, String searchTerm) {
         Page<Order> orderPage;
 
@@ -262,7 +263,7 @@ public class OrderService {
     }
 
     private OrderItem createOrderItem(Product product, int quantity) {
-        if ((product.getQuantityInStock() - quantity) <= product.getMinQuantity()){
+        if ((product.getQuantityInStock() - quantity) <= 0){
             throw new ProductException("Not enough stock for product: " + product.getName(), HttpStatus.BAD_REQUEST);
         }
 

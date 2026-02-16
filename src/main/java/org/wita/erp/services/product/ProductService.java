@@ -1,6 +1,6 @@
 package org.wita.erp.services.product;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
@@ -22,10 +22,13 @@ import org.wita.erp.domain.repositories.supplier.SupplierRepository;
 import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
+import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
+import org.wita.erp.infra.schedules.scheduler.SchedulerService;
 import org.wita.erp.services.stock.observers.StockMovementObserver;
 import org.wita.erp.services.stock.observers.UpdateStockMovementObserver;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Service
@@ -35,7 +38,9 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
     private final SupplierRepository supplierRepository;
+    private final SchedulerService schedulerService;
 
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<ProductDTO>> getAllProducts(Pageable pageable, String searchTerm) {
         Page<Product> productPage;
 
@@ -104,6 +109,14 @@ public class ProductService {
         productMapper.updateProductFromDTO(data, product);
         productRepository.save(product);
 
+        if (product.getQuantityInStock() <= product.getMinQuantity()) {
+            schedulerService.schedule(
+                    ScheduledTaskTypes.PRODUCT_REPLENISHMENT,
+                    product.getId().toString(),
+                    LocalDate.now().atStartOfDay()
+            );
+        }
+
         return ResponseEntity.ok(productMapper.toDTO(product));
     }
 
@@ -117,7 +130,7 @@ public class ProductService {
 
     @Transactional
     @EventListener
-    public void onStockMovement(StockMovementObserver event) {
+    public void onCreateStockMovement(StockMovementObserver event) {
         Product product = productRepository.findById(event.product())
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
 
@@ -132,6 +145,14 @@ public class ProductService {
             }
             product.setQuantityInStock(product.getQuantityInStock() - event.quantity());
             productRepository.save(product);
+        }
+
+        if (product.getQuantityInStock() <= product.getMinQuantity()){
+            schedulerService.schedule(
+                ScheduledTaskTypes.PRODUCT_REPLENISHMENT,
+                product.getId().toString(),
+                    LocalDate.now().atStartOfDay()
+                );
         }
     }
 
@@ -150,5 +171,13 @@ public class ProductService {
         }
 
         productRepository.save(product);
+
+        if (product.getQuantityInStock() <= product.getMinQuantity()) {
+            schedulerService.schedule(
+                    ScheduledTaskTypes.PRODUCT_REPLENISHMENT,
+                    product.getId().toString(),
+                    LocalDate.now().atStartOfDay()
+            );
+        }
     }
 }
