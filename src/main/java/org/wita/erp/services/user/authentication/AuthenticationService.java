@@ -8,15 +8,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.entities.user.dtos.AuthenticationDTO;
 import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
 import org.wita.erp.domain.entities.user.dtos.RequestRecoveryDTO;
 import org.wita.erp.domain.entities.user.dtos.RequestResetDTO;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
-import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.user.UserRepository;
+import org.wita.erp.infra.exceptions.auth.AuthException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.infra.providers.auth.AuthProvider;
 import org.wita.erp.infra.providers.email.EmailProvider;
@@ -43,14 +46,22 @@ public class AuthenticationService {
     private String frontendUrl;
 
     public ResponseEntity<LoginResponseDTO> login(AuthenticationDTO data) {
+        Authentication auth;
         var userNamePassword = new UsernamePasswordAuthenticationToken(data.email(), data.password());
-        var auth = this.authenticationManager.authenticate(userNamePassword);
 
-        var user =  (User) auth.getPrincipal();
+        try {
+            auth = this.authenticationManager.authenticate(userNamePassword);
+        } catch (AuthenticationException e) {
+            throw new AuthException("Invalid email or password", HttpStatus.UNAUTHORIZED) {
+            };
+        }
+
+        var user = (User) auth.getPrincipal();
         var token = authProvider.generateToken(user);
 
         return ResponseEntity.ok(new LoginResponseDTO(userMapper.toUserDTO(user), token));
     }
+
 
     public ResponseEntity<String> requestRecovery(RequestRecoveryDTO data, String userAgent) throws MessagingException {
         User user = userRepository.findByEmail(data.email())

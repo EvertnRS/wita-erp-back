@@ -24,6 +24,8 @@ public interface PurchaseMapper {
     @Mapping(target = "companyPaymentType", ignore = true)
     @Mapping(target = "items", ignore = true)
     @Mapping(target = "transactionCode", ignore = true)
+    @Mapping(target = "paymentStatus", ignore = true)
+    @Mapping(target = "paidAt", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updatePurchaseFromDTO(UpdatePurchaseRequestDTO dto, @MappingTarget Purchase purchase);
 

@@ -1,7 +1,7 @@
 package org.wita.erp.domain.entities.transaction.purchase.dtos;
 
 import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
-import org.wita.erp.domain.entities.status.PaymentStatus;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

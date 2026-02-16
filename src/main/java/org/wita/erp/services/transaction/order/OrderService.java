@@ -16,6 +16,7 @@ import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.dtos.OrderDTO;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.OrderItem;
@@ -26,10 +27,12 @@ import org.wita.erp.domain.repositories.payment.customer.CustomerPaymentTypeRepo
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.transaction.order.OrderRepository;
+import org.wita.erp.domain.repositories.transaction.order.ReceivableRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.order.OrderException;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
+import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
@@ -40,6 +43,7 @@ import org.wita.erp.services.transaction.order.observers.*;
 import org.wita.erp.services.user.observers.UserSoftDeleteObserver;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -53,6 +57,7 @@ public class OrderService {
     private final CustomerPaymentTypeRepository customerPaymentTypeRepository;
     private final ProductRepository productRepository;
     private final MovementReasonRepository movementReasonRepository;
+    private final ReceivableRepository receivableRepository;
     private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
@@ -112,19 +117,34 @@ public class OrderService {
 
         order.applyOrderDiscount();
 
-        orderRepository.save(order);
-
-        publisher.publishEvent(
-                new CreateOrderObserver(order.getId(), movementReason.getId())
-        );
 
         if (data.installments() != null) {
+            order.setPaymentStatus(PaymentStatus.PENDING);
+        } else {
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setPaidAt(LocalDateTime.now());
+        }
+
+        orderRepository.save(order);
+
+        if(data.installments() != null){
             publisher.publishEvent(
                     new CreateReceivableOrderObserver(order.getId())
             );
         }
 
-        return ResponseEntity.ok(orderMapper.toDTO(order));
+        publisher.publishEvent(
+                new CreateOrderObserver(order.getId(), movementReason.getId())
+        );
+
+        Order saved = orderRepository
+                .findByIdWithItems(order.getId())
+                .orElseThrow(() ->
+                        new PurchaseException("Purchase not found after save",
+                                HttpStatus.INTERNAL_SERVER_ERROR)
+                );
+
+        return ResponseEntity.ok(orderMapper.toDTO(saved));
     }
 
     public ResponseEntity<OrderDTO> update(UUID id, UpdateOrderRequestDTO data) {
@@ -158,6 +178,10 @@ public class OrderService {
         if (data.discount() != null) {
             order.setDiscount(data.discount());
             order.applyOrderDiscount();
+        }
+
+        if(data.paymentStatus() != null){
+            handlePaymentStatusUpdate(data, order);
         }
 
         orderMapper.updateOrderFromDTO(data, order);
@@ -338,6 +362,103 @@ public class OrderService {
     @Async
     public void orderCascadeDelete(UUID id){
         publisher.publishEvent(new OrderSoftDeleteObserver(id));
+    }
+
+    @EventListener
+    public void onReceivableStatusChanged(ReceivableStatusChangedObserver event) {
+        Order order = orderRepository.findById(event.order())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        order.setPaymentStatus(event.paymentStatus());
+        orderRepository.save(order);
+    }
+
+    private void handlePaymentStatusUpdate(UpdateOrderRequestDTO data, Order order) {
+        if(!order.getPaymentStatus().allowsManualUpdate()){
+            throw new OrderException("This Payment status cannot be updated manually", HttpStatus.BAD_REQUEST);
+        }
+
+        if (order.getPaymentStatus().isReversal() && data.paymentStatus().isReversal()){
+            throw new OrderException("Order is already in reversal status", HttpStatus.BAD_REQUEST);
+        }
+
+        if (data.paymentStatus() == PaymentStatus.OVERDUE
+                || data.paymentStatus() == PaymentStatus.PENDING) {
+
+            throw new OrderException("Cannot set manually order to this payment status", HttpStatus.BAD_REQUEST);
+        }
+
+        validatePaymentStatusInstallmentsOrder(order, data.paymentStatus());
+        validatePaymentStatusReversalOrder(order, data.paymentStatus(), data);
+
+        if (data.paymentStatus() == PaymentStatus.PAID) {
+            order.setPaidAt(LocalDateTime.now());
+        }
+
+        order.setPaymentStatus(data.paymentStatus());
+    }
+
+    private void validatePaymentStatusInstallmentsOrder(Order order, PaymentStatus newStatus){
+        if (order.getInstallments() != null) {
+            this.validatePaymentStatusTransition(order, newStatus);
+            publisher.publishEvent(new OrderStatusChangedObserver(order.getId(), newStatus));
+        }
+    }
+
+    private void validatePaymentStatusReversalOrder(Order order, PaymentStatus newStatus, UpdateOrderRequestDTO data){
+        if(newStatus.isReversal()){
+
+            if (data.movementReason() == null) {
+                throw new OrderException("Movement reason is required when changing to this payment status",
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            MovementReason movementReason = movementReasonRepository.findById(data.movementReason())
+                    .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+            order.getItems().forEach(item -> publisher.publishEvent(
+                    new RemoveProductInOrderObserver(
+                            order.getId(),
+                            movementReason.getId(),
+                            new ProductOrderRequestDTO(
+                                    item.getProduct().getId(),
+                                    item.getQuantity()
+                            )
+                    )
+            ));
+        }
+    }
+
+    private void validatePaymentStatusTransition(
+            Order order,
+            PaymentStatus newStatus
+    ) {
+
+        List<PaymentStatus> statuses =
+                receivableRepository.findDistinctStatusesByOrderId(order.getId());
+
+        switch (newStatus) {
+
+            case PAID ->
+                    throw new OrderException("Cannot set manually order with installments to this payment status",
+                            HttpStatus.BAD_REQUEST);
+
+
+            case CANCELED -> {
+                if (statuses.contains(PaymentStatus.PAID)
+                        || statuses.contains(PaymentStatus.REFUNDED)) {
+                    throw new OrderException("Cannot cancel this order",
+                            HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            case REFUNDED -> {
+                if (!statuses.contains(PaymentStatus.PAID) || !order.getCustomerPaymentType().getSupportsRefunds()) {
+                    throw new OrderException("Cannot mark this order as REFUNDED",
+                            HttpStatus.BAD_REQUEST);
+                }
+            }
+        }
     }
 
 }

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.envers.Audited;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.transaction.Transaction;
 
@@ -17,6 +18,7 @@ import java.util.UUID;
 @Table(name = "stock_movement")
 @Getter
 @Setter
+@Audited
 @NoArgsConstructor
 @AllArgsConstructor
 public class StockMovement {
@@ -27,6 +29,7 @@ public class StockMovement {
     @JoinColumn(name = "product_id")
     private Product product;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "movement_type", nullable = false)
     private StockMovementType stockMovementType;
 

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
@@ -51,4 +52,13 @@ public interface PurchaseRepository extends JpaRepository<Purchase, UUID> {
     RETURNING t.id;
 """, nativeQuery = true)
     List<UUID> cascadeDeleteFromCompanyPaymentType(UUID companyPaymentTypeId);
+
+    @Query("""
+    SELECT p FROM Purchase p
+    LEFT JOIN FETCH p.items i
+    LEFT JOIN FETCH i.product
+    WHERE p.id = :id
+""")
+    Optional<Purchase> findByIdWithItems(UUID id);
+
 }

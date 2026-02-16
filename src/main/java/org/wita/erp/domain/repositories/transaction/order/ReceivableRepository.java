@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.order.Receivable;
 
 import java.util.List;
@@ -32,5 +33,8 @@ public interface ReceivableRepository extends JpaRepository<Receivable, UUID> {
     RETURNING id
 """, nativeQuery = true)
     List<UUID> cascadeDeleteFromOrder(UUID orderId);
+
+    @Query("SELECT DISTINCT r.paymentStatus FROM Receivable r WHERE r.order.id = :orderId")
+    List<PaymentStatus> findDistinctStatusesByOrderId(UUID orderId);
 }
 

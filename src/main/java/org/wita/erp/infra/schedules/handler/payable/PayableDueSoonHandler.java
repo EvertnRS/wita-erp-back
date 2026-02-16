@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.wita.erp.domain.entities.status.PaymentStatus;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.purchase.Payable;
 import org.wita.erp.domain.repositories.transaction.purchase.PayableRepository;
 import org.wita.erp.infra.providers.email.EmailProvider;

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.envers.Audited;
 
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import java.util.UUID;
 @Table(name = "category")
 @Getter
 @Setter
+@Audited
 @NoArgsConstructor
 @AllArgsConstructor
 public class Category {

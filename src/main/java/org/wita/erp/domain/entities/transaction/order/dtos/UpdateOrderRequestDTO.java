@@ -2,6 +2,7 @@ package org.wita.erp.domain.entities.transaction.order.dtos;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -12,5 +13,7 @@ public record UpdateOrderRequestDTO(BigDecimal value,
                                     UUID seller,
                                     UUID customerPaymentType,
                                     String transactionCode,
-                                    String description) {
+                                    String description,
+                                    PaymentStatus paymentStatus,
+                                    UUID movementReason) {
 }

@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.audit.EntityType;
-import org.wita.erp.domain.entities.status.PaymentStatus;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.Receivable;
 import org.wita.erp.domain.entities.transaction.order.dtos.CreateReceivableRequestDTO;
@@ -24,13 +24,13 @@ import org.wita.erp.domain.entities.transaction.order.mappers.ReceivableMapper;
 import org.wita.erp.domain.repositories.transaction.order.OrderRepository;
 import org.wita.erp.domain.repositories.transaction.order.ReceivableRepository;
 import org.wita.erp.infra.exceptions.order.OrderException;
-import org.wita.erp.infra.exceptions.payable.PayableException;
 import org.wita.erp.infra.exceptions.receivable.ReceivableException;
 import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
 import org.wita.erp.infra.schedules.scheduler.SchedulerService;
 import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
 import org.wita.erp.services.transaction.order.observers.CreateReceivableOrderObserver;
 import org.wita.erp.services.transaction.order.observers.OrderSoftDeleteObserver;
+import org.wita.erp.services.transaction.order.observers.OrderStatusChangedObserver;
 import org.wita.erp.services.transaction.order.observers.ReceivableCompensationObserver;
 
 import java.math.BigDecimal;
@@ -62,13 +62,12 @@ public class ReceivableService {
         return ResponseEntity.ok(receivablePage.map(receivableMapper::toDTO));
     }
 
-    @Transactional
     public ResponseEntity<List<ReceivableDTO>> save(CreateReceivableRequestDTO data){
         Order order = orderRepository.findById(data.order())
                 .orElseThrow(() -> new OrderException("Order not registered in the system", HttpStatus.NOT_FOUND));
 
         if (order.getCustomerPaymentType().getIsImmediate()){
-            throw new PayableException("Cannot create receivable for immediate payment orders", HttpStatus.BAD_REQUEST);
+            throw new ReceivableException("Cannot create receivable for immediate payment orders", HttpStatus.BAD_REQUEST);
         }
 
         BigDecimal installmentValue = order.getValue().divide(BigDecimal.valueOf(order.getInstallments()), 2, RoundingMode.HALF_UP);
@@ -120,32 +119,30 @@ public class ReceivableService {
         PaymentStatus newStatus = data.paymentStatus();
         LocalDate newDueDate = data.dueDate();
 
+        if(!currentStatus.allowsManualUpdate()){
+            throw new ReceivableException("Payment status cannot be updated manually", HttpStatus.BAD_REQUEST);
+        }
+
+        if(newStatus == PaymentStatus.PENDING || newStatus == PaymentStatus.OVERDUE){
+            throw new ReceivableException("This new payment status cannot be set manually", HttpStatus.BAD_REQUEST);
+        }
+
         boolean statusChanging = newStatus != null && newStatus != currentStatus;
         boolean dueDateChanging = newDueDate != null;
 
-        if (statusChanging && newStatus != PaymentStatus.PENDING && dueDateChanging) {
+        if (dueDateChanging && currentStatus != PaymentStatus.PENDING) {
             throw new ReceivableException(
-                    "Cannot update due date for non-pending receivables",
+                    "Due date can only be changed while payable is PENDING",
                     HttpStatus.BAD_REQUEST
             );
         }
 
         if (statusChanging && currentStatus == PaymentStatus.PENDING) {
-
-            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, id.toString());
-            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, id.toString());
+            cancelScheduleTasks(receivable.getId());
         }
 
-        if (statusChanging && newStatus == PaymentStatus.PENDING) {
-
-            scheduleTasks(receivable.getId(),
-                    newDueDate != null ? newDueDate : receivable.getDueDate());
-        }
-
-        if (!statusChanging && dueDateChanging
-                && currentStatus == PaymentStatus.PENDING) {
-
-            scheduleTasks(receivable.getId(), newDueDate);
+        if (!statusChanging && dueDateChanging) {
+            rescheduleTasks(receivable.getId(), newDueDate);
         }
 
         receivableMapper.updateReceivableFromDTO(data, receivable);
@@ -156,13 +153,30 @@ public class ReceivableService {
 
     public ResponseEntity<ReceivableDTO> delete(UUID id, DeleteReceivableRequestDTO data) {
         Receivable receivable = receivableRepository.findById(id)
-                .orElseThrow(() -> new PayableException("Receivable not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ReceivableException("Receivable not found", HttpStatus.NOT_FOUND));
         receivable.setActive(false);
         receivableRepository.save(receivable);
 
         this.auditReceivableSoftDelete(id, data.reason());
 
         return ResponseEntity.ok(receivableMapper.toDTO(receivable));
+    }
+
+    @EventListener
+    public void onOrderSoftDelete(OrderSoftDeleteObserver event) {
+        List<UUID> receivableIds = receivableRepository.cascadeDeleteFromOrder(event.order());
+        if(!receivableIds.isEmpty()){
+            for (UUID receivableId : receivableIds) {
+                this.auditReceivableSoftDelete(receivableId, "Cascade delete from order " + event.order());
+
+                cancelScheduleTasks(receivableId);
+            }
+        }
+    }
+
+    @Async
+    public void auditReceivableSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.RECEIVABLE.getEntityType(), reason));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -196,29 +210,87 @@ public class ReceivableService {
 
         List<Receivable> receivables = receivableRepository.findByOrderId(event.order());
 
-        // Order installments updated
+        synchronizeInstallments(order, receivables);
+
+        synchronizeValues(order, receivables);
+    }
+
+    private void synchronizeInstallments(Order order, List<Receivable> receivables) {
         if (order.getInstallments() != receivables.size()) {
-            receivables.forEach(
-                    receivable -> this.delete(receivable.getId(), new DeleteReceivableRequestDTO("Order installments updated")
-            ));
+            receivables.forEach(receivable ->
+                    this.delete(
+                            receivable.getId(),
+                            new DeleteReceivableRequestDTO("Orders installments updated")
+                    )
+            );
 
             this.save(new CreateReceivableRequestDTO(
                     PaymentStatus.PENDING,
-                    event.order()
+                    order.getId()
             ));
-        }
-
-        // Order items updated
-        if (!Objects.equals(order.getValue(), receivables.stream().map(Receivable::getValue).reduce(BigDecimal.ZERO, BigDecimal::add))) {
-            receivables
-                    .forEach(receivable -> {
-                        receivable.setValue(order.getValue().divide(BigDecimal.valueOf(order.getInstallments()), 2, RoundingMode.HALF_UP));
-                        receivableRepository.save(receivable);
-                    });
         }
     }
 
-    private void scheduleTasks(UUID id, LocalDate dueDate) {
+    private void synchronizeValues(Order order, List<Receivable> receivables) {
+        BigDecimal totalReceivables = receivables.stream()
+                .map(Receivable::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (!order.getItems().isEmpty()
+                && !Objects.equals(order.getValue(), totalReceivables)) {
+
+            BigDecimal installmentValue =
+                    order.getValue().divide(
+                            BigDecimal.valueOf(order.getInstallments()),
+                            2,
+                            RoundingMode.HALF_UP
+                    );
+
+            receivables.forEach(receivable -> {
+                receivable.setValue(installmentValue);
+                receivableRepository.save(receivable);
+            });
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onOrderStatusChanged(OrderStatusChangedObserver event) {
+        orderRepository.findById(event.order())
+                .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        List<Receivable> receivables = receivableRepository.findByOrderId(event.order());
+
+        switch (event.newStatus()) {
+
+            case CANCELED -> cancelAllReceivables(receivables);
+            case REFUNDED -> refundOrCancelReceivables(receivables);
+        }
+    }
+
+    private void cancelAllReceivables(List<Receivable> receivables) {
+        receivables.forEach(receivable -> {
+            receivable.setPaymentStatus(PaymentStatus.CANCELED);
+            receivableRepository.save(receivable);
+            cancelScheduleTasks(receivable.getId());
+        });
+    }
+
+    private void refundOrCancelReceivables(List<Receivable> receivables) {
+
+        receivables.forEach(receivable -> {
+
+            if (receivable.getPaymentStatus() == PaymentStatus.PAID) {
+                receivable.setPaymentStatus(PaymentStatus.REFUNDED);
+            } else {
+                receivable.setPaymentStatus(PaymentStatus.CANCELED);
+            }
+
+            receivableRepository.save(receivable);
+            cancelScheduleTasks(receivable.getId());
+        });
+    }
+
+    private void rescheduleTasks(UUID id, LocalDate dueDate) {
 
         schedulerService.reschedule(
                 ScheduledTaskTypes.RECEIVABLE_OVERDUE,
@@ -235,22 +307,8 @@ public class ReceivableService {
         }
     }
 
-    @EventListener
-    public void onOrderSoftDelete(OrderSoftDeleteObserver event) {
-        List<UUID> receivableIds = receivableRepository.cascadeDeleteFromOrder(event.order());
-        if(!receivableIds.isEmpty()){
-            for (UUID receivableId : receivableIds) {
-                this.auditReceivableSoftDelete(receivableId, "Cascade delete from order " + event.order());
-
-                schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, receivableId.toString());
-                schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, receivableId.toString());
-            }
-        }
+    public void cancelScheduleTasks(UUID id){
+        schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, id.toString());
+        schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, id.toString());
     }
-
-    @Async
-    public void auditReceivableSoftDelete(UUID id, String reason){
-        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.RECEIVABLE.getEntityType(), reason));
-    }
-
 }

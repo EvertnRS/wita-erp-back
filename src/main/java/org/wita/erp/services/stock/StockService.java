@@ -168,8 +168,12 @@ public class StockService {
     @Async
     public void onOrderCreated(CreateOrderObserver event) {
         try{
-            Order order = orderRepository.findById(event.order())
-                    .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+            Order order = orderRepository
+                    .findByIdWithItems(event.order())
+                    .orElseThrow(() ->
+                            new PurchaseException("Purchase not found after save",
+                                    HttpStatus.INTERNAL_SERVER_ERROR)
+                    );
 
             MovementReason movementReason = movementReasonRepository.findById(event.movementReason())
                     .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
@@ -189,8 +193,12 @@ public class StockService {
     @Async
     public void onPurchaseCreated(CreatePurchaseObserver event) {
         try{
-            Purchase purchase = purchaseRepository.findById(event.purchase())
-                    .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
+            Purchase purchase = purchaseRepository
+                    .findByIdWithItems(event.purchase())
+                    .orElseThrow(() ->
+                            new PurchaseException("Purchase not found",
+                                    HttpStatus.NOT_FOUND)
+                    );
 
             MovementReason movementReason = movementReasonRepository.findById(event.movementReason())
                     .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));

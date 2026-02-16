@@ -6,10 +6,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.EqualsAndHashCode;
+import org.hibernate.envers.Audited;
 
 @Entity
 @Table(name = "permission")
 @Getter @Setter
+@Audited
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(of = "id")
