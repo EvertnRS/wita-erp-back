@@ -8,6 +8,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.controllers.transaction.purchase.docs.PurchaseDocs;
 import org.wita.erp.domain.entities.transaction.dtos.PurchaseDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.*;
 import org.wita.erp.services.transaction.purchase.PurchaseService;
@@ -17,10 +18,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/purchase")
 @RequiredArgsConstructor
-public class PurchaseController {
+public class PurchaseController implements PurchaseDocs {
     private final PurchaseService purchaseService;
 
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('PURCHASE_READ')")
     public ResponseEntity<Page<PurchaseDTO>> getAllPurchases(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return purchaseService.getAllPurchases(pageable, searchTerm);

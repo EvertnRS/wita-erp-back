@@ -58,7 +58,7 @@ public class UserService {
 
         this.userRepository.save(newUser);
 
-        return ResponseEntity.ok(userMapper.toUserDTO(newUser));
+        return ResponseEntity.status(HttpStatus.CREATED).body(userMapper.toUserDTO(newUser));
     }
 
     public ResponseEntity<UserDTO> update(UUID id, UpdateUserRequestDTO data) {

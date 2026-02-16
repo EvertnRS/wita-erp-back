@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.supplier.dtos.CreateSupplierRequestDTO;
+import org.wita.erp.domain.entities.supplier.dtos.SupplierDTO;
 import org.wita.erp.domain.entities.supplier.dtos.UpdateSupplierRequestDTO;
 import org.wita.erp.domain.entities.supplier.mappers.SupplierMapper;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
@@ -20,7 +21,7 @@ public class SupplierService {
     private final SupplierRepository supplierRepository;
     private final SupplierMapper supplierMapper;
 
-    public ResponseEntity<Page<Supplier>> getAllSuppliers(Pageable pageable, String searchTerm) {
+    public ResponseEntity<Page<SupplierDTO>> getAllSuppliers(Pageable pageable, String searchTerm) {
         Page<Supplier> supplierPage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -29,10 +30,10 @@ public class SupplierService {
             supplierPage = supplierRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(supplierPage);
+        return ResponseEntity.ok(supplierPage.map(supplierMapper::toDTO));
     }
 
-    public ResponseEntity<Supplier> save(CreateSupplierRequestDTO data) {
+    public ResponseEntity<SupplierDTO> save(CreateSupplierRequestDTO data) {
         if (supplierRepository.findByCnpj(data.cnpj()) != null) {
             throw new SupplierException("Supplier already exists", HttpStatus.CONFLICT);
         }
@@ -45,24 +46,24 @@ public class SupplierService {
 
         supplierRepository.save(supplier);
 
-        return ResponseEntity.ok(supplier);
+        return ResponseEntity.status(HttpStatus.CREATED).body(supplierMapper.toDTO(supplier));
     }
 
-    public ResponseEntity<Supplier> update(UUID id, UpdateSupplierRequestDTO data) {
+    public ResponseEntity<SupplierDTO> update(UUID id, UpdateSupplierRequestDTO data) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new SupplierException("Supplier not found", HttpStatus.NOT_FOUND));
 
         supplierMapper.updateSupplierFromDTO(data, supplier);
         supplierRepository.save(supplier);
 
-        return ResponseEntity.ok(supplier);
+        return ResponseEntity.ok(supplierMapper.toDTO(supplier));
     }
 
-    public ResponseEntity<Supplier> delete(UUID id) {
+    public ResponseEntity<SupplierDTO> delete(UUID id) {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new SupplierException("Supplier not found", HttpStatus.NOT_FOUND));
         supplier.setActive(false);
         supplierRepository.save(supplier);
-        return ResponseEntity.ok(supplier);
+        return ResponseEntity.ok(supplierMapper.toDTO(supplier));
     }
 }

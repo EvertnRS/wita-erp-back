@@ -10,6 +10,7 @@ import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
 import org.wita.erp.domain.entities.payment.customer.dto.CreateCustomerPaymentTypeRequestDTO;
+import org.wita.erp.domain.entities.payment.customer.dto.CustomerPaymentTypeDTO;
 import org.wita.erp.domain.entities.payment.customer.dto.UpdateCustomerPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.customer.mappers.CustomerPaymentTypeMapper;
 import org.wita.erp.domain.entities.payment.dtos.CreatePaymentTypeRequestDTO;
@@ -29,7 +30,7 @@ public class CustomerPaymentTypeService {
     private final CustomerRepository customerRepository;
     private final CustomerPaymentTypeRepository customerPaymentTypeRepository;
 
-    public ResponseEntity<Page<CustomerPaymentType>> getAllCustomerPaymentTypes(Pageable pageable, String searchTerm) {
+    public ResponseEntity<Page<CustomerPaymentTypeDTO>> getAllCustomerPaymentTypes(Pageable pageable, String searchTerm) {
         Page<CustomerPaymentType> customerPaymentTypePage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -38,10 +39,10 @@ public class CustomerPaymentTypeService {
             customerPaymentTypePage = customerPaymentTypeRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(customerPaymentTypePage);
+        return ResponseEntity.ok(customerPaymentTypePage.map(customerPaymentTypeMapper::toDTO));
     }
 
-    public ResponseEntity<PaymentType> save(CreateCustomerPaymentTypeRequestDTO data) {
+    public ResponseEntity<CustomerPaymentTypeDTO> save(CreateCustomerPaymentTypeRequestDTO data) {
         Customer customer = customerRepository.findById(data.customer())
                 .orElseThrow(() -> new PaymentTypeException("Customer not found", HttpStatus.NOT_FOUND));
 
@@ -54,10 +55,12 @@ public class CustomerPaymentTypeService {
                 data.allowsInstallments()
         ));
 
-        return ResponseEntity.ok(response.getBody());
+        CustomerPaymentType savedEntity = (CustomerPaymentType) response.getBody();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(customerPaymentTypeMapper.toDTO(savedEntity));
     }
 
-    public ResponseEntity<PaymentType> update(UUID id, UpdateCustomerPaymentTypeRequestDTO data) {
+    public ResponseEntity<CustomerPaymentTypeDTO> update(UUID id, UpdateCustomerPaymentTypeRequestDTO data) {
         CustomerPaymentType customerPaymentType = customerPaymentTypeRepository.findById(id)
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
 
@@ -68,15 +71,19 @@ public class CustomerPaymentTypeService {
                 data.allowsInstallments()
         ));
 
-        return ResponseEntity.ok(response.getBody());
+        CustomerPaymentType updated = (CustomerPaymentType) response.getBody();
+
+        return ResponseEntity.ok(customerPaymentTypeMapper.toDTO(updated));
     }
 
-    public ResponseEntity<PaymentType> delete(UUID id) {
+    public ResponseEntity<CustomerPaymentTypeDTO> delete(UUID id) {
         CustomerPaymentType customerPaymentType = customerPaymentTypeRepository.findById(id)
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
 
         ResponseEntity<PaymentType> response = paymentTypeService.delete(customerPaymentType.getId());
 
-        return ResponseEntity.ok(response.getBody());
+        CustomerPaymentType deleted = (CustomerPaymentType) response.getBody();
+
+        return ResponseEntity.ok(customerPaymentTypeMapper.toDTO(deleted));
     }
 }

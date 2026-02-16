@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
+import org.wita.erp.domain.entities.product.dtos.ProductDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.product.mappers.ProductMapper;
 import org.wita.erp.domain.entities.stock.StockMovementType;
@@ -35,7 +36,7 @@ public class ProductService {
     private final ProductMapper productMapper;
     private final SupplierRepository supplierRepository;
 
-    public ResponseEntity<Page<Product>> getAllProducts(Pageable pageable, String searchTerm) {
+    public ResponseEntity<Page<ProductDTO>> getAllProducts(Pageable pageable, String searchTerm) {
         Page<Product> productPage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -44,10 +45,10 @@ public class ProductService {
             productPage = productRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(productPage);
+        return ResponseEntity.ok(productPage.map(productMapper::toDTO));
     }
 
-    public ResponseEntity<Product> save(CreateProductRequestDTO data) {
+    public ResponseEntity<ProductDTO> save(CreateProductRequestDTO data) {
         Category category = categoryRepository.findById(data.category())
                 .orElseThrow(() -> new CategoryException("Category not registered in the system", HttpStatus.NOT_FOUND));
 
@@ -62,7 +63,7 @@ public class ProductService {
 
         productRepository.save(product);
 
-        return ResponseEntity.ok(product);
+        return ResponseEntity.status(HttpStatus.CREATED).body(productMapper.toDTO(product));
     }
 
     private Product getProduct(CreateProductRequestDTO data, Category category, Supplier supplier) {
@@ -84,7 +85,7 @@ public class ProductService {
         return product;
     }
 
-    public ResponseEntity<Product> update(UUID id, UpdateProductRequestDTO data) {
+    public ResponseEntity<ProductDTO> update(UUID id, UpdateProductRequestDTO data) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
 
@@ -103,15 +104,15 @@ public class ProductService {
         productMapper.updateProductFromDTO(data, product);
         productRepository.save(product);
 
-        return ResponseEntity.ok(product);
+        return ResponseEntity.ok(productMapper.toDTO(product));
     }
 
-    public ResponseEntity<Product> delete(UUID id) {
+    public ResponseEntity<ProductDTO> delete(UUID id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
         product.setActive(false);
         productRepository.save(product);
-        return ResponseEntity.ok(product);
+        return ResponseEntity.ok(productMapper.toDTO(product));
     }
 
     @Transactional

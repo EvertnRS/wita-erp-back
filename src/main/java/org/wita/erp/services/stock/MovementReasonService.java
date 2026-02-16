@@ -8,7 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.dtos.CreateMovementReasonRequestDTO;
+import org.wita.erp.domain.entities.stock.dtos.MovementReasonDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateMovementReasonRequestDTO;
+import org.wita.erp.domain.entities.stock.mappers.MovementReasonMapper;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
@@ -19,8 +21,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MovementReasonService {
     private final MovementReasonRepository movementReasonRepository;
+    private final MovementReasonMapper movementReasonMapper;
 
-    public ResponseEntity<Page<MovementReason>> getAllMovementReason(Pageable pageable, String searchTerm) {
+    public ResponseEntity<Page<MovementReasonDTO>> getAllMovementReason(Pageable pageable, String searchTerm) {
         Page<MovementReason> movementReasonPage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -29,10 +32,10 @@ public class MovementReasonService {
             movementReasonPage = movementReasonRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(movementReasonPage);
+        return ResponseEntity.ok(movementReasonPage.map(movementReasonMapper::toDTO));
     }
 
-    public ResponseEntity<MovementReason> save(CreateMovementReasonRequestDTO data) {
+    public ResponseEntity<MovementReasonDTO> save(CreateMovementReasonRequestDTO data) {
         if (movementReasonRepository.findByReason(data.reason()) != null) {
             throw new CategoryException("Movement Reason already exists", HttpStatus.CONFLICT);
         }
@@ -42,25 +45,26 @@ public class MovementReasonService {
 
         movementReasonRepository.save(movementReason);
 
-        return ResponseEntity.ok(movementReason);
+        return ResponseEntity.ok(movementReasonMapper.toDTO(movementReason));
     }
 
-    public ResponseEntity<MovementReason> update(UUID id, UpdateMovementReasonRequestDTO data) {
+    public ResponseEntity<MovementReasonDTO> update(UUID id, UpdateMovementReasonRequestDTO data) {
         MovementReason movementReason = movementReasonRepository.findById(id)
                 .orElseThrow(() -> new MovementReasonException("MovementReason not found", HttpStatus.NOT_FOUND));
 
         if(data.reason() != null) {
             movementReason.setReason(data.reason());
+            movementReasonRepository.save(movementReason);
         }
 
-        return ResponseEntity.ok(movementReason);
+        return ResponseEntity.ok(movementReasonMapper.toDTO(movementReason));
     }
 
-    public ResponseEntity<MovementReason> delete(UUID id) {
+    public ResponseEntity<MovementReasonDTO> delete(UUID id) {
         MovementReason movementReason = movementReasonRepository.findById(id)
                 .orElseThrow(() -> new MovementReasonException("MovementReason not found", HttpStatus.NOT_FOUND));
         movementReason.setActive(false);
         movementReasonRepository.save(movementReason);
-        return ResponseEntity.ok(movementReason);
+        return ResponseEntity.ok(movementReasonMapper.toDTO(movementReason));
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.payment.PaymentType;
 import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
+import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
 import org.wita.erp.domain.entities.payment.company.dtos.CreateCompanyPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.company.dtos.UpdateCompanyPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.company.mappers.CompanyPaymentTypeMapper;
@@ -26,13 +27,13 @@ public class CompanyPaymentTypeService {
     private final PaymentTypeService paymentTypeService;
     private final CompanyPaymentTypeRepository companyPaymentTypeRepository;
 
-    public ResponseEntity<Page<CompanyPaymentType>> getAllCompanyPaymentTypes(Pageable pageable) {
+    public ResponseEntity<Page<CompanyPaymentTypeDTO>> getAllCompanyPaymentTypes(Pageable pageable) {
         Page<CompanyPaymentType> companyPaymentTypePage = companyPaymentTypeRepository.findAll(pageable);
 
-        return ResponseEntity.ok(companyPaymentTypePage);
+        return ResponseEntity.ok(companyPaymentTypePage.map(companyPaymentTypeMapper::toDTO));
     }
 
-    public ResponseEntity<PaymentType> save(CreateCompanyPaymentTypeRequestDTO data) {
+    public ResponseEntity<CompanyPaymentTypeDTO> save(CreateCompanyPaymentTypeRequestDTO data) {
         CompanyPaymentType companyPaymentType = getCompanyPaymentType(data);
 
         ResponseEntity<PaymentType> response = paymentTypeService.save(companyPaymentType, new CreatePaymentTypeRequestDTO(
@@ -41,7 +42,9 @@ public class CompanyPaymentTypeService {
                 data.allowsInstallments()
         ));
 
-        return ResponseEntity.ok(response.getBody());
+        CompanyPaymentType savedEntity = (CompanyPaymentType) response.getBody();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(companyPaymentTypeMapper.toDTO(savedEntity));
     }
 
     private static CompanyPaymentType getCompanyPaymentType(CreateCompanyPaymentTypeRequestDTO data) {
@@ -50,7 +53,7 @@ public class CompanyPaymentTypeService {
         companyPaymentType.setAgencyNumber(data.agencyNumber());
         companyPaymentType.setAccountNumber(data.accountNumber());
 
-        if(data.allowsInstallments() && !data.isImmediate()){
+        if (data.allowsInstallments() && !data.isImmediate()) {
             companyPaymentType.setLastFourDigits(data.lastFourDigits());
             companyPaymentType.setBrand(data.brand());
             companyPaymentType.setClosingDay(data.closingDay());
@@ -58,7 +61,7 @@ public class CompanyPaymentTypeService {
         return companyPaymentType;
     }
 
-    public ResponseEntity<PaymentType> update(UUID id, UpdateCompanyPaymentTypeRequestDTO data) {
+    public ResponseEntity<CompanyPaymentTypeDTO> update(UUID id, UpdateCompanyPaymentTypeRequestDTO data) {
         CompanyPaymentType companyPaymentType = companyPaymentTypeRepository.findById(id)
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
 
@@ -70,15 +73,19 @@ public class CompanyPaymentTypeService {
                 data.allowsInstallments()
         ));
 
-        return ResponseEntity.ok(response.getBody());
+        CompanyPaymentType updated = (CompanyPaymentType) response.getBody();
+
+        return ResponseEntity.ok(companyPaymentTypeMapper.toDTO(updated));
     }
 
-    public ResponseEntity<PaymentType> delete(UUID id) {
+    public ResponseEntity<CompanyPaymentTypeDTO> delete(UUID id) {
         CompanyPaymentType companyPaymentType = companyPaymentTypeRepository.findById(id)
                 .orElseThrow(() -> new PaymentTypeException("Payment Type not found", HttpStatus.NOT_FOUND));
 
         ResponseEntity<PaymentType> response = paymentTypeService.delete(companyPaymentType.getId());
 
-        return ResponseEntity.ok(response.getBody());
+        CompanyPaymentType deleted = (CompanyPaymentType) response.getBody();
+
+        return ResponseEntity.ok(companyPaymentTypeMapper.toDTO(deleted));
     }
 }

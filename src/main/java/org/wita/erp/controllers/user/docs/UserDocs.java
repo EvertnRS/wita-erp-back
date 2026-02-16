@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -29,7 +30,7 @@ public interface UserDocs {
             @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have USER_READ authority", content = @Content)
     })
-    ResponseEntity<Page<UserDTO>> getAllUsers(@PageableDefault(size = 10, sort = "name")
+    ResponseEntity<Page<UserDTO>> getAllUsers(@ParameterObject
                                               Pageable pageable,
                                               @Parameter(description = "Term used to filter users by name or email.", example = "John Doe")
                                               String searchTerm);

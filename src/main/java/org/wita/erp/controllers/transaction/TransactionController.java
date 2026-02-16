@@ -7,6 +7,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.controllers.transaction.docs.TransactionDocs;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
 import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
@@ -17,10 +18,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/transaction")
 @RequiredArgsConstructor
-public class TransactionController {
+public class TransactionController implements TransactionDocs {
     private final TransactionService transactionService;
 
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('ORDER_READ') and hasAuthority('PURCHASE_READ')")
     public ResponseEntity<Page<TransactionDTO>> getAllTransactions(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) TransactionType transactionType) {
         return transactionService.getAllTransactions(pageable, transactionType);

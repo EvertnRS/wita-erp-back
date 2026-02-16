@@ -52,7 +52,7 @@ public class RoleService {
         role.setPermissions(permissions);
         roleRepository.save(role);
 
-        return ResponseEntity.ok(roleMapper.toDTO(role));
+        return ResponseEntity.status(HttpStatus.CREATED).body(roleMapper.toDTO(role));
     }
 
     public ResponseEntity<RoleDTO> update(Long id, UpdateRoleRequestDTO data) {

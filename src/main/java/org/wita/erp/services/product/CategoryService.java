@@ -7,8 +7,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.product.Category;
+import org.wita.erp.domain.entities.product.dtos.CategoryDTO;
 import org.wita.erp.domain.entities.product.dtos.CreateCategoryRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateCategoryRequestDTO;
+import org.wita.erp.domain.entities.product.mappers.CategoryMapper;
 import org.wita.erp.infra.exceptions.product.CategoryException;
 import org.wita.erp.domain.repositories.product.CategoryRepository;
 
@@ -18,8 +20,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CategoryService {
     private final CategoryRepository categoryRepository;
+    private final CategoryMapper categoryMapper;
 
-    public ResponseEntity<Page<Category>> getAllCategories(Pageable pageable, String searchTerm) {
+    public ResponseEntity<Page<CategoryDTO>> getAllCategories(Pageable pageable, String searchTerm) {
         Page<Category> categoryPage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -28,10 +31,10 @@ public class CategoryService {
             categoryPage = categoryRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(categoryPage);
+        return ResponseEntity.ok(categoryPage.map(categoryMapper::toDTO));
     }
 
-    public ResponseEntity<Category> save(CreateCategoryRequestDTO data) {
+    public ResponseEntity<CategoryDTO> save(CreateCategoryRequestDTO data) {
         if (categoryRepository.findByName(data.name()) != null) {
             throw new CategoryException("Category already exists", HttpStatus.CONFLICT);
         }
@@ -41,10 +44,10 @@ public class CategoryService {
 
         categoryRepository.save(category);
 
-        return ResponseEntity.ok(category);
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoryMapper.toDTO(category));
     }
 
-    public ResponseEntity<Category> update(UUID id, UpdateCategoryRequestDTO data) {
+    public ResponseEntity<CategoryDTO> update(UUID id, UpdateCategoryRequestDTO data) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryException("Category not found", HttpStatus.NOT_FOUND));
 
@@ -54,15 +57,15 @@ public class CategoryService {
 
         categoryRepository.save(category);
 
-        return ResponseEntity.ok(category);
+        return ResponseEntity.ok(categoryMapper.toDTO(category));
     }
 
     // FIXME: O que acontece com os produtos que tem a categoria que está sendo desativada?
-    public ResponseEntity<Category> delete(UUID id) {
+    public ResponseEntity<CategoryDTO> delete(UUID id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryException("Category not found", HttpStatus.NOT_FOUND));
         category.setActive(false);
         categoryRepository.save(category);
-        return ResponseEntity.ok(category);
+        return ResponseEntity.ok(categoryMapper.toDTO(category));
     }
 }

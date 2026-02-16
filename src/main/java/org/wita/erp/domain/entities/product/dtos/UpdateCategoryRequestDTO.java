@@ -1,4 +1,9 @@
 package org.wita.erp.domain.entities.product.dtos;
 
-public record UpdateCategoryRequestDTO(String name) {
+import io.swagger.v3.oas.annotations.media.Schema;
+
+public record UpdateCategoryRequestDTO(
+        @Schema(description = "New category name", example = "Electronics")
+        String name
+) {
 }

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
+import org.wita.erp.domain.entities.customer.dtos.CustomerDTO;
 import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.mappers.CustomerMapper;
 import org.wita.erp.infra.exceptions.customer.CustomerException;
@@ -22,7 +23,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
 
-    public ResponseEntity<Page<Customer>> getAllCustomers(Pageable pageable, String searchTerm) {
+    public ResponseEntity<Page<CustomerDTO>> getAllCustomers(Pageable pageable, String searchTerm) {
         Page<Customer> customerPage;
 
         if (searchTerm != null && !searchTerm.isBlank()) {
@@ -31,10 +32,10 @@ public class CustomerService {
             customerPage = customerRepository.findAll(pageable);
         }
 
-        return ResponseEntity.ok(customerPage);
+        return ResponseEntity.ok(customerPage.map(customerMapper::toDTO));
     }
 
-    public ResponseEntity<Customer> save(CreateCustomerRequestDTO data) {
+    public ResponseEntity<CustomerDTO> save(CreateCustomerRequestDTO data) {
         if (customerRepository.findByEmail(data.name()) != null || customerRepository.findByCpf(data.cpf()) != null) {
             throw new CustomerException("Customer already exists", HttpStatus.CONFLICT);
         }
@@ -48,10 +49,10 @@ public class CustomerService {
 
         customerRepository.save(customer);
 
-        return ResponseEntity.ok(customer);
+        return ResponseEntity.status(HttpStatus.CREATED).body(customerMapper.toDTO(customer));
     }
 
-    public ResponseEntity<Customer> update(UUID id, UpdateCustomerRequestDTO data) {
+    public ResponseEntity<CustomerDTO> update(UUID id, UpdateCustomerRequestDTO data) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new CustomerException("Customer not found", HttpStatus.NOT_FOUND));
 
@@ -65,14 +66,14 @@ public class CustomerService {
         customerMapper.updateCustomerFromDTO(data, customer);
         customerRepository.save(customer);
 
-        return ResponseEntity.ok(customer);
+        return ResponseEntity.ok(customerMapper.toDTO(customer));
     }
 
-    public ResponseEntity<Customer> delete(UUID id) {
+    public ResponseEntity<CustomerDTO> delete(UUID id) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new CustomerException("Customer not found", HttpStatus.NOT_FOUND));
         customer.setActive(false);
         customerRepository.save(customer);
-        return ResponseEntity.ok(customer);
+        return ResponseEntity.ok(customerMapper.toDTO(customer));
     }
 }
