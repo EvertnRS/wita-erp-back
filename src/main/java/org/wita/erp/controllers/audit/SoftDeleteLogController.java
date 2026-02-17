@@ -14,13 +14,13 @@ import org.wita.erp.domain.entities.audit.SoftDeleteLog;
 import org.wita.erp.services.audit.SoftDeleteLogService;
 
 @RestController
-@RequestMapping("/log")
+@RequestMapping("/audit")
 @RequiredArgsConstructor
-public class AuditController {
+public class SoftDeleteLogController {
     private final SoftDeleteLogService softDeleteLogService;
 
     @GetMapping("/delete")
-    @PreAuthorize("hasAuthority('DELETE_LOG_READ')")
+    @PreAuthorize("hasAuthority('LOG_READ')")
     public ResponseEntity<Page<SoftDeleteLog>> getAllTransactions(@PageableDefault(size = 10, sort = "deletedAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return softDeleteLogService.getAllSoftDeleteLogs(pageable, searchTerm);
     }

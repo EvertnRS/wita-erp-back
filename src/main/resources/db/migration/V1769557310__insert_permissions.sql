@@ -87,5 +87,5 @@ INSERT INTO permission (name, description) VALUES
 ('RECEIVABLE_UPDATE', 'Atualizar contas a receber'),
 ('RECEIVABLE_DELETE', 'Remover contas a receber'),
 
--- Histórico de exclusão de registros
-('DELETE_LOG_READ', 'Visualizar histórico de exclusão de registros');
+-- Histórico de registros
+('LOG_READ', 'Visualizar histórico de registros');
