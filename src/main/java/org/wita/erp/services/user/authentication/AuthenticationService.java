@@ -49,8 +49,7 @@ public class AuthenticationService {
         try {
             auth = this.authenticationManager.authenticate(userNamePassword);
         } catch (AuthenticationException e) {
-            throw new AuthException("Invalid email or password", HttpStatus.UNAUTHORIZED) {
-            };
+            throw new AuthException("Invalid email or password", HttpStatus.UNAUTHORIZED);
         }
 
         var user = (User) auth.getPrincipal();
