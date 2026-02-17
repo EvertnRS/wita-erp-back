@@ -66,7 +66,7 @@ public class UserService {
                 .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
 
         Optional<User> existingUser = userRepository.findByEmail(data.email());
-        if (existingUser.isPresent()) {
+        if (existingUser.isPresent() && !existingUser.get().getId().equals(user.getId())) {
             throw new UserException("Email already registered", HttpStatus.CONFLICT);
         }
 
@@ -76,8 +76,8 @@ public class UserService {
             user.setPassword(encryptedPass);
         }
         if (data.role() != null) {
-            Role role = roleRepository.findById(data.role()).orElse(null);
-            if (role == null) return ResponseEntity.badRequest().build();
+            Role role = roleRepository.findById(data.role())
+                    .orElseThrow(() -> new UserException("Role not registered in the system", HttpStatus.NOT_FOUND));
             user.setRole(role);
         }
 
