@@ -9,9 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.product.docs.CategoryDocs;
-import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.dtos.CategoryDTO;
 import org.wita.erp.domain.entities.product.dtos.CreateCategoryRequestDTO;
+import org.wita.erp.domain.entities.product.dtos.DeleteCategoryRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateCategoryRequestDTO;
 import org.wita.erp.services.product.CategoryService;
 
@@ -43,7 +43,7 @@ public class CategoryController implements CategoryDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('CATEGORY_DELETE')")
-    public ResponseEntity<CategoryDTO> delete(@PathVariable UUID id) {
-        return categoryService.delete(id);
+    public ResponseEntity<CategoryDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteCategoryRequestDTO data) {
+        return categoryService.delete(id, data);
     }
 }

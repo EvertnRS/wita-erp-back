@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.envers.Audited;
 import org.wita.erp.domain.entities.supplier.Supplier;
 
 import java.math.BigDecimal;
@@ -21,6 +22,7 @@ import java.util.UUID;
 @Table(name = "product")
 @Getter
 @Setter
+@Audited
 @NoArgsConstructor
 @AllArgsConstructor
 public class Product {

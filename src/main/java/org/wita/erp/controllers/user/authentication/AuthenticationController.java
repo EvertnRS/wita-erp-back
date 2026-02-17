@@ -1,4 +1,4 @@
-package org.wita.erp.controllers.user;
+package org.wita.erp.controllers.user.authentication;
 
 import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;

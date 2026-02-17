@@ -1,6 +1,5 @@
 package org.wita.erp.services.transaction.purchase;
 
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -10,10 +9,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.supplier.Supplier;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.dtos.PurchaseDTO;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.transaction.purchase.PurchaseItem;
@@ -24,6 +28,7 @@ import org.wita.erp.domain.repositories.payment.company.CompanyPaymentTypeReposi
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.supplier.SupplierRepository;
+import org.wita.erp.domain.repositories.transaction.purchase.PayableRepository;
 import org.wita.erp.domain.repositories.transaction.purchase.PurchaseRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
@@ -32,10 +37,17 @@ import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
 import org.wita.erp.infra.exceptions.user.UserException;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.payment.company.observers.CompanyPaymentTypeSoftDeleteObserver;
 import org.wita.erp.services.stock.observers.StockCompensationPurchaseObserver;
+import org.wita.erp.services.supplier.observers.SupplierSoftDeleteObserver;
+import org.wita.erp.services.transaction.observers.TransactionSoftDeleteObserver;
 import org.wita.erp.services.transaction.purchase.observers.*;
+import org.wita.erp.services.user.observers.UserSoftDeleteObserver;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -48,6 +60,7 @@ public class PurchaseService {
     private final SupplierRepository supplierRepository;
     private final CompanyPaymentTypeRepository companyPaymentTypeRepository;
     private final MovementReasonRepository movementReasonRepository;
+    private final PayableRepository payableRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher publisher;
 
@@ -110,19 +123,32 @@ public class PurchaseService {
         purchase.calculateSubTotal();
 
         if (data.installments() != null) {
+            purchase.setPaymentStatus(PaymentStatus.PENDING);
+        } else {
+            purchase.setPaymentStatus(PaymentStatus.PAID);
+            purchase.setPaidAt(LocalDateTime.now());
+        }
+
+        purchaseRepository.save(purchase);
+
+        if(data.installments() != null){
             publisher.publishEvent(
                     new CreatePayablePurchaseObserver(purchase.getId())
             );
         }
 
-        purchaseRepository.save(purchase);
-
         publisher.publishEvent(
                 new CreatePurchaseObserver(purchase.getId(), movementReason.getId())
         );
 
+        Purchase saved = purchaseRepository
+                .findByIdWithItems(purchase.getId())
+                .orElseThrow(() ->
+                        new PurchaseException("Purchase not found after save",
+                                HttpStatus.INTERNAL_SERVER_ERROR)
+                );
 
-        return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
+        return ResponseEntity.ok(purchaseMapper.toDTO(saved));
     }
 
     @Transactional
@@ -154,12 +180,19 @@ public class PurchaseService {
         purchase.setCompanyPaymentType(companyPaymentType);
 
         if (data.installments() != null) {
+            purchase.setPaymentStatus(PaymentStatus.PENDING);
+        } else {
+            purchase.setPaymentStatus(PaymentStatus.PAID);
+            purchase.setPaidAt(LocalDateTime.now());
+        }
+
+        purchaseRepository.save(purchase);
+
+        if(data.installments() != null){
             publisher.publishEvent(
                     new CreatePayablePurchaseObserver(purchase.getId())
             );
         }
-
-        purchaseRepository.save(purchase);
 
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
@@ -177,7 +210,6 @@ public class PurchaseService {
             User buyer = userRepository.findById(data.buyer())
                     .orElseThrow(() -> new UserException("Buyer not found", HttpStatus.NOT_FOUND));
             purchase.setBuyer(buyer);
-
         }
 
         if (data.supplier() != null){
@@ -186,15 +218,19 @@ public class PurchaseService {
             purchase.setSupplier(supplier);
         }
 
-        if (data.companyPaymentType() != null){
+        if (data.companyPaymentType() != null) {
             CompanyPaymentType companyPaymentType = companyPaymentTypeRepository.findById(data.companyPaymentType())
                     .orElseThrow(() -> new PaymentTypeException("Payment Type not registered in the system", HttpStatus.NOT_FOUND));
 
-            if((!companyPaymentType.getAllowsInstallments() || companyPaymentType.getIsImmediate()) && data.installments() != null){
+            if ((!companyPaymentType.getAllowsInstallments() || companyPaymentType.getIsImmediate()) && data.installments() != null) {
                 throw new PurchaseException("This payment type does not allow installments", HttpStatus.BAD_REQUEST);
             }
 
             purchase.setCompanyPaymentType(companyPaymentType);
+        }
+
+        if(data.paymentStatus() != null){
+            handlePaymentStatusUpdate(data, purchase);
         }
 
         if (purchase.getItems().isEmpty()){
@@ -217,11 +253,15 @@ public class PurchaseService {
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
 
-    public ResponseEntity<PurchaseDTO> delete(UUID id) {
+    public ResponseEntity<PurchaseDTO> delete(UUID id, DeletePurchaseRequestDTO data) {
         Purchase purchase = purchaseRepository.findById(id)
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
         purchase.setActive(false);
         purchaseRepository.save(purchase);
+
+        this.auditPurchaseSoftDelete(id, data.reason());
+        this.purchaseCascadeDelete(id);
+
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
 
@@ -319,7 +359,7 @@ public class PurchaseService {
         purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
-        this.delete(event.purchase());
+        this.delete(event.purchase(), new DeletePurchaseRequestDTO("Stock compensation for purchase " + event.purchase()));
     }
 
     @EventListener
@@ -328,7 +368,158 @@ public class PurchaseService {
         purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
-        this.delete(event.purchase());
+        this.delete(event.purchase(), new DeletePurchaseRequestDTO("Payable compensation for purchase " + event.purchase()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    public void onTransactionSoftDelete(TransactionSoftDeleteObserver event) {
+        if(purchaseRepository.findById(event.transaction()).isPresent()){
+            this.delete(event.transaction(), new DeletePurchaseRequestDTO(event.reason()));
+        }
+    }
+
+    @EventListener
+    public void onUserSoftDelete(UserSoftDeleteObserver event) {
+        List<UUID> purchaseIds = purchaseRepository.cascadeDeleteFromUser(event.user());
+        if(!purchaseIds.isEmpty()){
+            for (UUID purchaseId : purchaseIds) {
+                this.auditPurchaseSoftDelete(purchaseId, "Cascade delete from user " + event.user());
+                this.purchaseCascadeDelete(purchaseId);
+            }
+        }
+    }
+
+    @EventListener
+    public void onSupplierSoftDelete(SupplierSoftDeleteObserver event) {
+        List<UUID> purchaseIds = purchaseRepository.cascadeDeleteFromSupplier(event.supplier());
+        if(!purchaseIds.isEmpty()){
+            for (UUID purchaseId : purchaseIds) {
+                this.auditPurchaseSoftDelete(purchaseId, "Cascade delete from supplier " + event.supplier());
+                this.purchaseCascadeDelete(purchaseId);
+            }
+        }
+    }
+
+    @EventListener
+    public void onCompanyPaymentTypeSoftDelete(CompanyPaymentTypeSoftDeleteObserver event) {
+        List<UUID> purchaseIds = purchaseRepository.cascadeDeleteFromCompanyPaymentType(event.companyPaymentType());
+        if(!purchaseIds.isEmpty()){
+            for (UUID purchaseId : purchaseIds) {
+                this.auditPurchaseSoftDelete(purchaseId, "Cascade delete from company payment type " + event.companyPaymentType());
+                this.purchaseCascadeDelete(purchaseId);
+            }
+        }
+    }
+
+    @Async
+    public void auditPurchaseSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.TRANSACTION.getEntityType(), reason));
+    }
+
+    @Async
+    public void purchaseCascadeDelete(UUID id){
+        publisher.publishEvent(new PurchaseSoftDeleteObserver(id));
+    }
+
+    @EventListener
+    public void onPayableStatusChanged(PayableStatusChangedObserver event) {
+        Purchase purchase = purchaseRepository.findById(event.purchase())
+                .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
+
+        purchase.setPaymentStatus(event.paymentStatus());
+        purchaseRepository.save(purchase);
+    }
+
+    private void handlePaymentStatusUpdate(UpdatePurchaseRequestDTO data, Purchase purchase) {
+        if(!purchase.getPaymentStatus().allowsManualUpdate()){
+            throw new PurchaseException("This Payment status cannot be updated manually", HttpStatus.BAD_REQUEST);
+        }
+
+        if (purchase.getPaymentStatus().isReversal() && data.paymentStatus().isReversal()){
+            throw new PurchaseException("Purchase is already in reversal status", HttpStatus.BAD_REQUEST);
+        }
+
+        if (data.paymentStatus() == PaymentStatus.OVERDUE
+                || data.paymentStatus() == PaymentStatus.PENDING) {
+
+            throw new PurchaseException("Cannot set manually purchase to this payment status", HttpStatus.BAD_REQUEST);
+        }
+
+        validatePaymentStatusInstallmentsPurchase(purchase, data.paymentStatus());
+        validatePaymentStatusReplacementPurchase(purchase, data.paymentStatus(), data);
+
+        if (data.paymentStatus() == PaymentStatus.PAID) {
+            purchase.setPaidAt(LocalDateTime.now());
+        }
+
+        purchase.setPaymentStatus(data.paymentStatus());
+    }
+
+    private void validatePaymentStatusInstallmentsPurchase(Purchase purchase, PaymentStatus newStatus){
+        if (purchase.getInstallments() != null) {
+            this.validatePaymentStatusTransition(purchase, newStatus);
+            publisher.publishEvent(new PurchaseStatusChangedObserver(purchase.getId(), newStatus));
+        }
+    }
+
+    private void validatePaymentStatusReplacementPurchase(Purchase purchase, PaymentStatus newStatus, UpdatePurchaseRequestDTO data){
+        if (!purchase.getItems().isEmpty() && newStatus.isReversal()) {
+            MovementReason movementReason;
+
+            if (data.movementReason() != null) {
+                movementReason = movementReasonRepository.findById(data.movementReason())
+                        .orElseThrow(() -> new MovementReasonException("Movement reason not found", HttpStatus.NOT_FOUND));
+
+            } else {
+                throw new PurchaseException("Movement reason is required when changing to this payment status",
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            purchase.getItems().forEach(item -> {
+                publisher.publishEvent(
+                        new RemoveProductInPurchaseObserver(
+                                purchase.getId(),
+                                movementReason.getId(),
+                                new ProductPurchaseRequestDTO(
+                                        item.getProduct().getId(),
+                                        item.getQuantity()
+                                )
+                        )
+                );
+            });
+        }
+    }
+
+    private void validatePaymentStatusTransition(
+            Purchase purchase,
+            PaymentStatus newStatus
+    ) {
+
+        List<PaymentStatus> statuses =
+                payableRepository.findDistinctStatusesByPurchaseId(purchase.getId());
+
+        switch (newStatus) {
+
+            case PAID ->
+                throw new PurchaseException("Cannot set manually purchase with installments to this payment status",
+                        HttpStatus.BAD_REQUEST);
+
+
+            case CANCELED -> {
+                if (statuses.contains(PaymentStatus.PAID)
+                        || statuses.contains(PaymentStatus.REFUNDED)) {
+                    throw new PurchaseException("Cannot cancel this purchase",
+                            HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            case REFUNDED -> {
+                if (!statuses.contains(PaymentStatus.PAID)) {
+                    throw new PurchaseException("Cannot mark this purchase as REFUNDED",
+                            HttpStatus.BAD_REQUEST);
+                }
+            }
+        }
     }
 
 }

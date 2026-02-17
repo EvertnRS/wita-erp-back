@@ -3,7 +3,6 @@ CREATE TABLE orders
     id               UUID PRIMARY KEY,
     discount         NUMERIC(15, 2) NOT NULL,
     seller_id          UUID           NOT NULL,
-    installments        INT,
     customer_payment_type_id  UUID           NOT NULL,
 
     CONSTRAINT customer_payment_type_id_fk FOREIGN KEY (customer_payment_type_id) REFERENCES customer_payment_type (id),

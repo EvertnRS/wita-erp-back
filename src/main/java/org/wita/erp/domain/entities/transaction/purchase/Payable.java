@@ -8,7 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.wita.erp.domain.entities.status.PaymentStatus;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -32,6 +32,7 @@ public class Payable {
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus;
 
@@ -42,6 +43,10 @@ public class Payable {
     @ManyToOne
     @JoinColumn(name = "purchase_id")
     private Purchase purchase;
+
+    @FutureOrPresent
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 
     @Column(nullable = false)
     private Boolean active = true;

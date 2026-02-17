@@ -11,7 +11,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.wita.erp.domain.entities.transaction.order.dtos.CreateReceivableRequestDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 
@@ -47,8 +47,8 @@ public interface ReceivableDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have RECEIVABLE_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Receivable not found", content = @Content)
     })
-    ResponseEntity<ReceivableDTO> delete(@Parameter(description = "UUID of the receivable to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                    UUID id);
+    ResponseEntity<ReceivableDTO> delete(@Parameter(description = "UUID of the receivable to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                    UUID id, DeleteReceivableRequestDTO data);
 
 }
 

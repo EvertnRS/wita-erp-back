@@ -10,9 +10,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
+import org.wita.erp.domain.entities.product.dtos.DeleteProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.ProductDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 
@@ -56,8 +56,8 @@ public interface ProductDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have PRODUCT_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Product not found", content = @Content)
     })
-    ResponseEntity<ProductDTO> delete(@Parameter(description = "UUID of the product to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                   UUID id);
+    ResponseEntity<ProductDTO> delete(@Parameter(description = "UUID of the product to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                   UUID id, DeleteProductRequestDTO data);
 
 }
 

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.wita.erp.domain.entities.stock.dtos.CreateMovementReasonRequestDTO;
+import org.wita.erp.domain.entities.stock.dtos.DeleteMovementReasonRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.MovementReasonDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateMovementReasonRequestDTO;
 
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Tag(name = "Reason for stock movement management", description = "Endpoints to list, create, update and delete reason for movement stock on ERP system")
 public interface MovementReasonDocs {
 
-    @Operation(summary = "List Paged Reason for stock movement", description = "Return a reason for movement stock list with pagination support and name filter. \nRequires REASON_READ authority.")
+    @Operation(summary = "List Paged Reason for stock movement", description = "Return a reason for movement stock list with pagination support and reason filter. \nRequires REASON_READ authority.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Reason for stock movement retrieved successfully"),
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have REASON_READ authority", content = @Content)
@@ -55,8 +56,8 @@ public interface MovementReasonDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have REASON_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Reason for stock movement not found", content = @Content)
     })
-    ResponseEntity<MovementReasonDTO> delete(@Parameter(description = "UUID of the reason for movement stock to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                             UUID id);
+    ResponseEntity<MovementReasonDTO> delete(@Parameter(description = "UUID of the reason for movement stock to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                             UUID id, DeleteMovementReasonRequestDTO data);
 
 }
 

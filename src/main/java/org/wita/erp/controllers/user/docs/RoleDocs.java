@@ -2,28 +2,19 @@ package org.wita.erp.controllers.user.docs;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.wita.erp.domain.entities.user.Role;
-import org.wita.erp.domain.entities.user.dtos.CreateRoleRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.RoleDTO;
-import org.wita.erp.domain.entities.user.dtos.UpdateRoleRequestDTO;
-import org.wita.erp.domain.entities.user.dtos.UserDTO;
-
-import java.util.UUID;
+import org.wita.erp.domain.entities.user.role.dtos.CreateRoleRequestDTO;
+import org.wita.erp.domain.entities.user.role.dtos.DeleteRoleRequestDTO;
+import org.wita.erp.domain.entities.user.role.dtos.UpdateRoleRequestDTO;
 
 
 @Tag(name = "role management", description = "Endpoints to list, create, update and delete roles on ERP system")
@@ -66,8 +57,8 @@ public interface RoleDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have ROLE_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Role not found", content = @Content)
     })
-    ResponseEntity<RoleDTO> delete(@Parameter(description = "Id of the role to remove", example = "2")
-                                   Long id);
+    ResponseEntity<RoleDTO> delete(@Parameter(description = "Id of the role to remove and reason of delete", example = "2")
+                                   Long id, DeleteRoleRequestDTO data);
 
 }
 

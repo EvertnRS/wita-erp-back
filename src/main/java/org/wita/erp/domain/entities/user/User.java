@@ -6,12 +6,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.envers.Audited;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.wita.erp.domain.entities.user.role.Role;
 
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 
 @Entity
@@ -20,6 +21,7 @@ import java.util.*;
 @NoArgsConstructor
 @Getter
 @Setter
+@Audited
 public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Id

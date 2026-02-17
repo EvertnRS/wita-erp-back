@@ -3,6 +3,7 @@ package org.wita.erp.domain.entities.transaction.order.dtos;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -21,5 +22,9 @@ public record UpdateOrderRequestDTO(
         @Schema(description = "New transaction code for the order", example = "1234567890")
         String transactionCode,
         @Schema(description = "New description for the order", example = "Order for customer XYZ")
-        String description) {
+        String description,
+        @Schema(description = "New payment status for order", example = "CANCELED")
+        PaymentStatus paymentStatus,
+        @Schema(description = "New movement reason for order", example = "123e4567-e89b-12d3-a456-426614174000")
+        UUID movementReason) {
 }

@@ -1,13 +1,9 @@
 package org.wita.erp.domain.entities.user.mappers;
 
-import org.mapstruct.*;
-import org.wita.erp.domain.entities.user.Permission;
-import org.wita.erp.domain.entities.user.Role;
-import org.wita.erp.domain.entities.user.User;
+import org.mapstruct.Mapper;
 import org.wita.erp.domain.entities.user.dtos.RoleDTO;
-import org.wita.erp.domain.entities.user.dtos.SellerDTO;
-import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
-import org.wita.erp.domain.entities.user.dtos.UserDTO;
+import org.wita.erp.domain.entities.user.role.Permission;
+import org.wita.erp.domain.entities.user.role.Role;
 
 import java.util.Collections;
 import java.util.Set;

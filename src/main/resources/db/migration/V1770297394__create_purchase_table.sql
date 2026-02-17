@@ -3,7 +3,6 @@ CREATE TABLE purchase
     id                UUID           PRIMARY KEY,
     buyer_id         UUID           NOT NULL,
     supplier_id          UUID           NOT NULL,
-    installments        INT,
     company_payment_type_id  UUID           NOT NULL,
 
     CONSTRAINT company_payment_type_id_fk FOREIGN KEY (company_payment_type_id) REFERENCES company_payment_type (id),

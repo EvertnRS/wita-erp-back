@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.product.docs.ProductDocs;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.ProductDTO;
+import org.wita.erp.domain.entities.product.dtos.DeleteProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
-import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.services.product.ProductService;
 
 import java.util.UUID;
@@ -43,7 +43,7 @@ public class ProductController implements ProductDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('PRODUCT_DELETE')")
-    public ResponseEntity<ProductDTO> delete(@PathVariable UUID id) {
-        return productService.delete(id);
+    public ResponseEntity<ProductDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteProductRequestDTO data) {
+        return productService.delete(id, data);
     }
 }

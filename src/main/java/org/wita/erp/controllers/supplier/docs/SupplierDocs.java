@@ -11,9 +11,8 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
-import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.supplier.dtos.CreateSupplierRequestDTO;
+import org.wita.erp.domain.entities.supplier.dtos.DeleteSupplierRequestDTO;
 import org.wita.erp.domain.entities.supplier.dtos.SupplierDTO;
 import org.wita.erp.domain.entities.supplier.dtos.UpdateSupplierRequestDTO;
 
@@ -57,8 +56,8 @@ public interface SupplierDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have SUPPLIER_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Supplier not found", content = @Content)
     })
-    ResponseEntity<SupplierDTO> delete(@Parameter(description = "UUID of the supplier to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                   UUID id);
+    ResponseEntity<SupplierDTO> delete(@Parameter(description = "UUID of the supplier to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                   UUID id, DeleteSupplierRequestDTO data);
 
 }
 

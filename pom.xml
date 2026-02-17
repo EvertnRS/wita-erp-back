@@ -132,6 +132,12 @@
 			<version>8.5.0</version>
 		</dependency>
 
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-envers</artifactId>
+		</dependency>
+
+
 	</dependencies>
 
 

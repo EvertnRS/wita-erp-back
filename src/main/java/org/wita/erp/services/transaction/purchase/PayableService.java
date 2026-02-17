@@ -4,18 +4,22 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import org.wita.erp.domain.entities.status.PaymentStatus;
+import org.wita.erp.domain.entities.audit.EntityType;
+import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.purchase.Payable;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.CreatePayableRequestDTO;
+import org.wita.erp.domain.entities.transaction.purchase.dtos.DeletePayableRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.mappers.PayableMapper;
@@ -23,15 +27,15 @@ import org.wita.erp.domain.repositories.transaction.purchase.PayableRepository;
 import org.wita.erp.domain.repositories.transaction.purchase.PurchaseRepository;
 import org.wita.erp.infra.exceptions.payable.PayableException;
 import org.wita.erp.infra.exceptions.purchase.PurchaseException;
-import org.wita.erp.infra.exceptions.receivable.ReceivableException;
 import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
 import org.wita.erp.infra.schedules.scheduler.SchedulerService;
-import org.wita.erp.services.transaction.purchase.observers.CreatePayablePurchaseObserver;
-import org.wita.erp.services.transaction.purchase.observers.PayableCompensationObserver;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.transaction.purchase.observers.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -115,32 +119,42 @@ public class PayableService {
         PaymentStatus newStatus = data.paymentStatus();
         LocalDate newDueDate = data.dueDate();
 
+        if(!currentStatus.allowsManualUpdate()){
+            throw new PayableException("Payment status cannot be updated manually", HttpStatus.BAD_REQUEST);
+        }
+
+        if(newStatus == PaymentStatus.PENDING || newStatus == PaymentStatus.OVERDUE){
+            throw new PayableException("This new payment status cannot be set manually", HttpStatus.BAD_REQUEST);
+
+        }
+
         boolean statusChanging = newStatus != null && newStatus != currentStatus;
         boolean dueDateChanging = newDueDate != null;
 
-        if (statusChanging && newStatus != PaymentStatus.PENDING && dueDateChanging) {
-            throw new ReceivableException(
-                    "Cannot update due date for non-pending payables",
+        if (dueDateChanging && currentStatus != PaymentStatus.PENDING) {
+            throw new PayableException(
+                    "Due date can only be changed while payable is PENDING",
                     HttpStatus.BAD_REQUEST
             );
         }
 
         if (statusChanging && currentStatus == PaymentStatus.PENDING) {
-
-            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, id.toString());
-            schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, id.toString());
+            cancelScheduleTasks(id);
         }
 
-        if (statusChanging && newStatus == PaymentStatus.PENDING) {
-
-            scheduleTasks(payable.getId(),
-                    newDueDate != null ? newDueDate : payable.getDueDate());
+        if (!statusChanging && dueDateChanging) {
+            rescheduleTasks(id, newDueDate);
         }
 
-        if (!statusChanging && dueDateChanging
-                && currentStatus == PaymentStatus.PENDING) {
+        if(newStatus == PaymentStatus.PAID){
+            payable.setPaidAt(LocalDateTime.now());
 
-            scheduleTasks(payable.getId(), newDueDate);
+            List<PaymentStatus> statuses =
+                    payableRepository.findDistinctStatusesByPurchaseId(payable.getPurchase().getId());
+
+            if(statuses.size() == 1 && statuses.contains(PaymentStatus.PAID)){
+                publisher.publishEvent(new PayableStatusChangedObserver(payable.getPurchase().getId(), PaymentStatus.PAID));
+            }
         }
 
         payableMapper.updatePayableFromDTO(data, payable);
@@ -149,12 +163,36 @@ public class PayableService {
         return ResponseEntity.ok(payableMapper.toDTO(payable));
     }
 
-    public ResponseEntity<PayableDTO> delete(UUID id) {
+    public ResponseEntity<PayableDTO> delete(UUID id, DeletePayableRequestDTO data) {
         Payable payable = payableRepository.findById(id)
                 .orElseThrow(() -> new PayableException("Payable not found", HttpStatus.NOT_FOUND));
         payable.setActive(false);
+
         payableRepository.save(payable);
+
+        if(payable.getPaymentStatus() == PaymentStatus.PENDING){
+            this.cancelScheduleTasks(id);
+        }
+        this.auditPayableSoftDelete(id, data.reason());
+
         return ResponseEntity.ok(payableMapper.toDTO(payable));
+    }
+
+    @EventListener
+    public void onPurchaseSoftDelete(PurchaseSoftDeleteObserver event) {
+        List<UUID> payableIds = payableRepository.cascadeDeleteFromPurchase(event.purchase());
+        if(!payableIds.isEmpty()){
+            for (UUID payableId : payableIds) {
+                this.auditPayableSoftDelete(payableId, "Cascade delete from purchase " + event.purchase());
+
+                cancelScheduleTasks(payableId);
+            }
+        }
+    }
+
+    @Async
+    public void auditPayableSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.PAYABLE.getEntityType(), reason));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -180,7 +218,7 @@ public class PayableService {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void onPayablePurchaseUpdated(CreatePayablePurchaseObserver event) {
+    public void onPayablePurchaseUpdated(UpdatePayablePurchaseObserver event) {
         Purchase purchase = purchaseRepository.findById(event.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
@@ -190,30 +228,86 @@ public class PayableService {
 
         List<Payable> payables = payableRepository.findByPurchaseId(event.purchase());
 
-        // Purchase installments updated
+        synchronizeInstallments(purchase, payables);
+
+        synchronizeValues(purchase, payables);
+    }
+
+    private void synchronizeInstallments(Purchase purchase, List<Payable> payables) {
         if (purchase.getInstallments() != payables.size()) {
-            payables.forEach(
-                    payable -> this.delete(payable.getId())
+            payables.forEach(payable ->
+                    this.delete(
+                            payable.getId(),
+                            new DeletePayableRequestDTO("Purchases installments updated")
+                    )
             );
 
             this.save(new CreatePayableRequestDTO(
                     PaymentStatus.PENDING,
-                    event.purchase()
+                    purchase.getId()
             ));
-        }
-
-        // Purchase items updated
-        if (!purchase.getItems().isEmpty() && !Objects.equals(purchase.getValue(), payables.stream().map(Payable::getValue).reduce(BigDecimal.ZERO, BigDecimal::add))) {
-            payables
-                    .forEach(payable -> {
-                        payable.setValue(purchase.getValue().divide(BigDecimal.valueOf(purchase.getInstallments()), 2, RoundingMode.HALF_UP));
-                        payableRepository.save(payable);
-                    });
         }
     }
 
-    private void scheduleTasks(UUID id, LocalDate dueDate) {
+    private void synchronizeValues(Purchase purchase, List<Payable> payables) {
+        BigDecimal totalPayables = payables.stream()
+                .map(Payable::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        if (!purchase.getItems().isEmpty()
+                && !Objects.equals(purchase.getValue(), totalPayables)) {
+
+            BigDecimal installmentValue =
+                    purchase.getValue().divide(
+                            BigDecimal.valueOf(purchase.getInstallments()),
+                            2,
+                            RoundingMode.HALF_UP
+                    );
+
+            payables.forEach(payable -> {
+                payable.setValue(installmentValue);
+                payableRepository.save(payable);
+            });
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onPurchaseStatusChanged(PurchaseStatusChangedObserver event) {
+        purchaseRepository.findById(event.purchase())
+                .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
+
+        List<Payable> payables = payableRepository.findByPurchaseId(event.purchase());
+
+        switch (event.newStatus()) {
+
+            case CANCELED -> cancelAllPayables(payables);
+            case REFUNDED -> refundOrCancelPayables(payables);
+        }
+    }
+
+    private void cancelAllPayables(List<Payable> payables) {
+        payables.forEach(payable -> {
+            payable.setPaymentStatus(PaymentStatus.CANCELED);
+            payableRepository.save(payable);
+            cancelScheduleTasks(payable.getId());
+        });
+    }
+
+    private void refundOrCancelPayables(List<Payable> payables) {
+        payables.forEach(payable -> {
+
+            if (payable.getPaymentStatus() == PaymentStatus.PAID) {
+                payable.setPaymentStatus(PaymentStatus.REFUNDED);
+            } else {
+                payable.setPaymentStatus(PaymentStatus.CANCELED);
+            }
+
+            payableRepository.save(payable);
+            cancelScheduleTasks(payable.getId());
+        });
+    }
+
+    private void rescheduleTasks(UUID id, LocalDate dueDate) {
         schedulerService.reschedule(
                 ScheduledTaskTypes.PAYABLE_OVERDUE,
                 id.toString(),
@@ -227,5 +321,10 @@ public class PayableService {
                     dueDate.minusDays(3).atStartOfDay()
             );
         }
+    }
+
+    public void cancelScheduleTasks(UUID id){
+        schedulerService.cancel(ScheduledTaskTypes.PAYABLE_DUE_SOON, id.toString());
+        schedulerService.cancel(ScheduledTaskTypes.PAYABLE_OVERDUE, id.toString());
     }
 }

@@ -1,19 +1,25 @@
 package org.wita.erp.services.customer;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.CustomerDTO;
+import org.wita.erp.domain.entities.customer.dtos.DeleteCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.mappers.CustomerMapper;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
 import org.wita.erp.infra.exceptions.customer.CustomerException;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.customer.observers.CustomerSoftDeleteObserver;
 
 import java.util.UUID;
 
@@ -22,6 +28,7 @@ import java.util.UUID;
 public class CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
+    private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
     public ResponseEntity<Page<CustomerDTO>> getAllCustomers(Pageable pageable, String searchTerm) {
@@ -70,11 +77,25 @@ public class CustomerService {
         return ResponseEntity.ok(customerMapper.toDTO(customer));
     }
 
-    public ResponseEntity<CustomerDTO> delete(UUID id) {
+    public ResponseEntity<CustomerDTO> delete(UUID id, DeleteCustomerRequestDTO data) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new CustomerException("Customer not found", HttpStatus.NOT_FOUND));
         customer.setActive(false);
         customerRepository.save(customer);
+
+        this.auditCustomerSoftDelete(id, data.reason());
+        this.customerCascadeDelete(id);
+
         return ResponseEntity.ok(customerMapper.toDTO(customer));
+    }
+
+    @Async
+    public void auditCustomerSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.CUSTOMER.getEntityType(), reason));
+    }
+
+    @Async
+    public void customerCascadeDelete(UUID id){
+        publisher.publishEvent(new CustomerSoftDeleteObserver(id));
     }
 }

@@ -9,10 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.payment.company.docs.CompanyPaymentTypeDocs;
-import org.wita.erp.domain.entities.payment.PaymentType;
-import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
 import org.wita.erp.domain.entities.payment.company.dtos.CreateCompanyPaymentTypeRequestDTO;
+import org.wita.erp.domain.entities.payment.company.dtos.DeleteCompanyPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.company.dtos.UpdateCompanyPaymentTypeRequestDTO;
 import org.wita.erp.services.payment.company.CompanyPaymentTypeService;
 
@@ -26,8 +25,8 @@ public class CompanyPaymentTypeController implements CompanyPaymentTypeDocs {
 
     @GetMapping
     @PreAuthorize("hasAuthority('COMPANY_PAYMENT_READ')")
-    public ResponseEntity<Page<CompanyPaymentTypeDTO>> getAllCompanyPaymentTypes(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
-        return companyPaymentService.getAllCompanyPaymentTypes(pageable);
+    public ResponseEntity<Page<CompanyPaymentTypeDTO>> getAllCompanyPaymentTypes(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
+        return companyPaymentService.getAllCompanyPaymentTypes(pageable, searchTerm);
     }
 
     @PostMapping("/create")
@@ -44,7 +43,7 @@ public class CompanyPaymentTypeController implements CompanyPaymentTypeDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('COMPANY_PAYMENT_DELETE')")
-    public ResponseEntity<CompanyPaymentTypeDTO> delete(@PathVariable UUID id) {
-        return companyPaymentService.delete(id);
+    public ResponseEntity<CompanyPaymentTypeDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteCompanyPaymentTypeRequestDTO data) {
+        return companyPaymentService.delete(id, data);
     }
 }

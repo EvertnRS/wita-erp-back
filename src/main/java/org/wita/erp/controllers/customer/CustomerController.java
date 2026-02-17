@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.customer.docs.CustomerDocs;
 import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
+import org.wita.erp.domain.entities.customer.dtos.DeleteCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.CustomerDTO;
 import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 import org.wita.erp.services.customer.CustomerService;
@@ -44,7 +45,7 @@ public class CustomerController implements CustomerDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('CUSTOMER_DELETE')")
-    public ResponseEntity<CustomerDTO> delete(@PathVariable UUID id) {
-        return customerService.delete(id);
+    public ResponseEntity<CustomerDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteCustomerRequestDTO data) {
+        return customerService.delete(id, data);
     }
 }

@@ -18,7 +18,7 @@ import java.util.UUID;
 @Tag(name = "Stock movement management", description = "Endpoints to list, create, update and delete stock movement on ERP system")
 public interface StockDocs {
 
-    @Operation(summary = "List Paged stock movement", description = "Return a stock movement list with pagination support and name filter. \nRequires STOCK_READ authority.")
+    @Operation(summary = "List Paged stock movement", description = "Return a stock movement list with pagination support and created date filter. \nRequires STOCK_READ authority.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Stock movement retrieved successfully"),
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have STOCK_READ authority", content = @Content)
@@ -45,8 +45,8 @@ public interface StockDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have STOCK_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Stock movement not found", content = @Content)
     })
-    ResponseEntity<StockMovementDTO> delete(@Parameter(description = "UUID of the stock movement to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                             UUID id);
+    ResponseEntity<StockMovementDTO> delete(@Parameter(description = "UUID of the stock movement to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                             UUID id, DeleteStockRequestDTO data);
 
 }
 
