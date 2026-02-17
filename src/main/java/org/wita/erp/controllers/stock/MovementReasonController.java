@@ -12,6 +12,7 @@ import org.wita.erp.controllers.stock.docs.MovementReasonDocs;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.dtos.CreateMovementReasonRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.MovementReasonDTO;
+import org.wita.erp.domain.entities.stock.dtos.DeleteMovementReasonRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateMovementReasonRequestDTO;
 import org.wita.erp.services.stock.MovementReasonService;
 
@@ -43,7 +44,7 @@ public class MovementReasonController implements MovementReasonDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('REASON_DELETE')")
-    public ResponseEntity<MovementReasonDTO> delete(@PathVariable UUID id) {
-        return movementReasonService.delete(id);
+    public ResponseEntity<MovementReasonDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteMovementReasonRequestDTO data) {
+        return movementReasonService.delete(id, data);
     }
 }

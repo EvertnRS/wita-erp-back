@@ -12,7 +12,8 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     @Query("SELECT c FROM Customer c WHERE " +
             "(LOWER(c.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
             "(LOWER(c.cpf) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
-            "(LOWER(c.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+            "(LOWER(c.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
+            "LOWER(CAST(c.id AS STRING)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
     Page<Customer> findBySearchTerm(String searchTerm, Pageable pageable);
 
     Customer findByEmail(String name);

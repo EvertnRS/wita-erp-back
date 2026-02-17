@@ -2,13 +2,14 @@ package org.wita.erp.domain.entities.stock;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.wita.erp.domain.entities.transaction.Transaction;
-import org.wita.erp.domain.entities.transaction.order.Order;
+import org.hibernate.envers.Audited;
 import org.wita.erp.domain.entities.product.Product;
-import org.wita.erp.domain.entities.transaction.purchase.Purchase;
-import org.wita.erp.domain.entities.user.User;
+import org.wita.erp.domain.entities.transaction.Transaction;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @Table(name = "stock_movement")
 @Getter
 @Setter
+@Audited
 @NoArgsConstructor
 @AllArgsConstructor
 public class StockMovement {
@@ -27,6 +29,7 @@ public class StockMovement {
     @JoinColumn(name = "product_id")
     private Product product;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "movement_type", nullable = false)
     private StockMovementType stockMovementType;
 
@@ -42,16 +45,10 @@ public class StockMovement {
     @JoinColumn(name = "transaction_id")
     private Transaction transaction;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
     private Boolean active = true;
-
-    // TODO: relacionar com compra
 }

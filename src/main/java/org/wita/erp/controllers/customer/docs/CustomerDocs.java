@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.CustomerDTO;
+import org.wita.erp.domain.entities.customer.dtos.DeleteCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 
 import java.util.UUID;
@@ -55,8 +56,8 @@ public interface CustomerDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have CUSTOMER_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Customer not found", content = @Content)
     })
-    ResponseEntity<CustomerDTO> delete(@Parameter(description = "UUID of the customer to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                   UUID id);
+    ResponseEntity<CustomerDTO> delete(@Parameter(description = "UUID of the customer to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                   UUID id, DeleteCustomerRequestDTO data);
 
 }
 

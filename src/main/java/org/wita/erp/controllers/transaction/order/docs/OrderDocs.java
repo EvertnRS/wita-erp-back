@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.wita.erp.domain.entities.transaction.dtos.OrderDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.CreateOrderRequestDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.DeleteOrderRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.ProductInOrderDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateOrderRequestDTO;
 
@@ -80,8 +81,8 @@ public interface OrderDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have ORDER_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Order not found", content = @Content)
     })
-    ResponseEntity<OrderDTO> delete(@Parameter(description = "UUID of the order to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                    UUID id);
+    ResponseEntity<OrderDTO> delete(@Parameter(description = "UUID of the order to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                    UUID id, DeleteOrderRequestDTO data);
 
 }
 

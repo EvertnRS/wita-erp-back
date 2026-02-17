@@ -53,8 +53,8 @@ public interface CategoryDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have CATEGORY_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Category not found", content = @Content)
     })
-    ResponseEntity<CategoryDTO> delete(@Parameter(description = "UUID of the category to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                   UUID id);
+    ResponseEntity<CategoryDTO> delete(@Parameter(description = "UUID of the category to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                   UUID id, DeleteCategoryRequestDTO data);
 
 }
 

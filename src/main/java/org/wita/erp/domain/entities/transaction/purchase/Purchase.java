@@ -1,8 +1,6 @@
 package org.wita.erp.domain.entities.transaction.purchase;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,10 +22,6 @@ import java.util.List;
 @AllArgsConstructor
 @PrimaryKeyJoinColumn(name = "id")
 public class Purchase extends Transaction {
-
-    @Min(1) @Max(48)
-    private Integer installments;
-
     @ManyToOne
     @JoinColumn(name = "buyer_id", nullable = false)
     private User buyer;

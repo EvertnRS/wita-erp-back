@@ -12,10 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.wita.erp.domain.entities.transaction.dtos.PurchaseDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.CreateExpensePurchaseRequestDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.CreateReplacementPurchaseRequestDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.ProductInPurchaseDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePurchaseRequestDTO;
+import org.wita.erp.domain.entities.transaction.purchase.dtos.*;
 
 import java.util.UUID;
 
@@ -100,8 +97,8 @@ public interface PurchaseDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have PURCHASE_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Purchase not found", content = @Content)
     })
-    ResponseEntity<PurchaseDTO> delete(@Parameter(description = "UUID of the purchase to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                    UUID id);
+    ResponseEntity<PurchaseDTO> delete(@Parameter(description = "UUID of the purchase to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                    UUID id, DeletePurchaseRequestDTO data);
 
 }
 

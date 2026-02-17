@@ -1,17 +1,21 @@
 package org.wita.erp.services.product;
 
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.product.dtos.CreateProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.ProductDTO;
+import org.wita.erp.domain.entities.product.dtos.DeleteProductRequestDTO;
 import org.wita.erp.domain.entities.product.dtos.UpdateProductRequestDTO;
 import org.wita.erp.domain.entities.product.mappers.ProductMapper;
 import org.wita.erp.domain.entities.stock.StockMovementType;
@@ -24,11 +28,16 @@ import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.supplier.SupplierException;
 import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
 import org.wita.erp.infra.schedules.scheduler.SchedulerService;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.product.observers.CategorySoftDeleteObserver;
+import org.wita.erp.services.product.observers.ProductSoftDeleteObserver;
 import org.wita.erp.services.stock.observers.StockMovementObserver;
 import org.wita.erp.services.stock.observers.UpdateStockMovementObserver;
+import org.wita.erp.services.supplier.observers.SupplierSoftDeleteObserver;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -39,6 +48,7 @@ public class ProductService {
     private final ProductMapper productMapper;
     private final SupplierRepository supplierRepository;
     private final SchedulerService schedulerService;
+    private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
     public ResponseEntity<Page<ProductDTO>> getAllProducts(Pageable pageable, String searchTerm) {
@@ -120,11 +130,16 @@ public class ProductService {
         return ResponseEntity.ok(productMapper.toDTO(product));
     }
 
-    public ResponseEntity<ProductDTO> delete(UUID id) {
+    public ResponseEntity<ProductDTO> delete(UUID id, DeleteProductRequestDTO data) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductException("Product not found", HttpStatus.NOT_FOUND));
         product.setActive(false);
+
         productRepository.save(product);
+
+        this.auditProductSoftDelete(id, data.reason());
+        this.productCascadeDelete(id);
+
         return ResponseEntity.ok(productMapper.toDTO(product));
     }
 
@@ -179,5 +194,37 @@ public class ProductService {
                     LocalDate.now().atStartOfDay()
             );
         }
+    }
+
+    @EventListener
+    public void onSupplierSoftDelete(SupplierSoftDeleteObserver event) {
+        List<UUID> productIds = productRepository.cascadeDeleteFromSupplier(event.supplier());
+        if(!productIds.isEmpty()){
+            for (UUID productId : productIds) {
+                this.auditProductSoftDelete(productId, "Cascade delete from supplier " + event.supplier());
+                this.productCascadeDelete(productId);
+            }
+        }
+    }
+
+    @EventListener
+    public void onCategorySoftDelete(CategorySoftDeleteObserver event) {
+        List<UUID> productIds = productRepository.cascadeDeleteFromCategory(event.category());
+        if(!productIds.isEmpty()){
+            for (UUID productId : productIds) {
+                this.auditProductSoftDelete(productId, "Cascade delete from category " + event.category());
+                this.productCascadeDelete(productId);
+            }
+        }
+    }
+
+    @Async
+    public void auditProductSoftDelete(UUID id, String reason){
+        publisher.publishEvent(new SoftDeleteLogObserver(id.toString(), EntityType.PRODUCT.getEntityType(), reason));
+    }
+
+    @Async
+    public void productCascadeDelete(UUID id){
+        publisher.publishEvent(new ProductSoftDeleteObserver(id));
     }
 }

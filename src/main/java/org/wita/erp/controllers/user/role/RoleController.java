@@ -1,4 +1,4 @@
-package org.wita.erp.controllers.user;
+package org.wita.erp.controllers.user.role;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -8,10 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.user.docs.RoleDocs;
-import org.wita.erp.domain.entities.user.dtos.CreateRoleRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.RoleDTO;
-import org.wita.erp.domain.entities.user.dtos.UpdateRoleRequestDTO;
-import org.wita.erp.domain.entities.user.Role;
+import org.wita.erp.domain.entities.user.role.dtos.CreateRoleRequestDTO;
+import org.wita.erp.domain.entities.user.role.dtos.DeleteRoleRequestDTO;
+import org.wita.erp.domain.entities.user.role.dtos.UpdateRoleRequestDTO;
 import org.wita.erp.services.user.role.RoleService;
 
 @RestController
@@ -40,8 +40,8 @@ public class RoleController implements RoleDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_DELETE')")
-    public ResponseEntity<RoleDTO> delete(@PathVariable Long id) {
-        return roleService.delete(id);
+    public ResponseEntity<RoleDTO> delete(@PathVariable Long id, @RequestBody DeleteRoleRequestDTO data) {
+        return roleService.delete(id, data);
     }
 
 }

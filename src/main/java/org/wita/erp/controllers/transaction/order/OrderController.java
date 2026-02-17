@@ -53,7 +53,7 @@ public class OrderController implements OrderDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ORDER_DELETE')")
-    public ResponseEntity<OrderDTO> delete(@PathVariable UUID id) {
-        return orderService.delete(id);
+    public ResponseEntity<OrderDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteOrderRequestDTO data) {
+        return orderService.delete(id, data);
     }
 }

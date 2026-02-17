@@ -10,26 +10,19 @@ public interface StockMapper {
     @Mapping(target = "product", ignore = true)
     @Mapping(target = "movementReason", ignore = true)
     @Mapping(target = "transaction", ignore = true)
-    @Mapping(target = "user", ignore = true)
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateStockFromDTO(UpdateStockRequestDTO dto, @MappingTarget StockMovement stock);
 
     @Mapping(target = "product", source = ".")
-    @Mapping(target = "user", source = "user")
     @Mapping(target = "movementInfo", source = ".")
     @Mapping(target = "transactionCode", source = "transaction.transactionCode")
     StockMovementDTO StockMovementToDTO(StockMovement entity);
-
 
     @Mapping(target = "id", source = "product.id")
     @Mapping(target = "name", source = "product.name")
     @Mapping(target = "quantity", source = "quantity")
     @Mapping(target = "quantityInStock", source = "product.quantityInStock")
     StockMovementDTO.Product mapProduct(StockMovement entity);
-
-    @Mapping(target = "id", source = "user.id")
-    @Mapping(target = "name", source = "user.name")
-    StockMovementDTO.User mapUser(org.wita.erp.domain.entities.user.User user);
 
     @Mapping(target = "movementType", source = "stockMovementType")
     @Mapping(target = "movementReason", source = "movementReason.reason")

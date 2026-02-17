@@ -7,16 +7,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.wita.erp.domain.entities.user.dtos.RoleDTO;
+import org.wita.erp.domain.entities.user.dtos.DeleteUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UserDTO;
 
@@ -52,8 +47,8 @@ public interface UserDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have USER_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
     })
-    ResponseEntity<UserDTO> delete(@Parameter(description = "UUID of the user to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                   UUID id);
+    ResponseEntity<UserDTO> delete(@Parameter(description = "UUID of the user to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                   UUID id, DeleteUserRequestDTO data);
 
 }
 

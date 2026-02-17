@@ -6,6 +6,7 @@ CREATE TABLE payable
     payment_status VARCHAR(20)    NOT NULL,
     installment      INTEGER,
     purchase_id   UUID           NOT NULL,
+    paid_at       TIMESTAMP,
     active            BOOLEAN        DEFAULT TRUE,
     created_at        TIMESTAMP      NOT NULL DEFAULT now(),
 

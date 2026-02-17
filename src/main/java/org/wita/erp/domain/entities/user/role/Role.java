@@ -1,4 +1,4 @@
-package org.wita.erp.domain.entities.user;
+package org.wita.erp.domain.entities.user.role;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,12 +6,14 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.EqualsAndHashCode;
+import org.hibernate.envers.Audited;
 
 import java.util.Set;
 
 @Entity
 @Table(name = "role")
 @Getter @Setter
+@Audited
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(of = "id")

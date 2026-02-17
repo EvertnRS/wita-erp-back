@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.wita.erp.domain.entities.payment.customer.dto.CreateCustomerPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.customer.dto.CustomerPaymentTypeDTO;
+import org.wita.erp.domain.entities.payment.customer.dto.DeleteCustomerPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.customer.dto.UpdateCustomerPaymentTypeRequestDTO;
 
 import java.util.UUID;
@@ -55,8 +56,8 @@ public interface CustomerPaymentTypeDocs {
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have CUSTOMER_PAYMENT_DELETE authority", content = @Content),
             @ApiResponse(responseCode = "404", description = "Customer's payment type not found", content = @Content)
     })
-    ResponseEntity<CustomerPaymentTypeDTO> delete(@Parameter(description = "UUID of the customer's payment type to remove", example = "123e4567-e89b-12d3-a456-426614174000")
-                                       UUID id);
+    ResponseEntity<CustomerPaymentTypeDTO> delete(@Parameter(description = "UUID of the customer's payment type to remove and reason of delete", example = "123e4567-e89b-12d3-a456-426614174000")
+                                       UUID id, DeleteCustomerPaymentTypeRequestDTO data);
 
 }
 

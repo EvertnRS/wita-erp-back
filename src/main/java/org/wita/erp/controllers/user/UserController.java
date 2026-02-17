@@ -1,10 +1,5 @@
 package org.wita.erp.controllers.user;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,9 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.user.docs.UserDocs;
+import org.wita.erp.domain.entities.user.dtos.DeleteUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UserDTO;
-
 import org.wita.erp.services.user.UserService;
 
 import java.util.UUID;
@@ -41,7 +36,7 @@ public class UserController implements UserDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('USER_DELETE')")
-    public ResponseEntity<UserDTO> delete(@PathVariable UUID id) {
-        return userService.delete(id);
+    public ResponseEntity<UserDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteUserRequestDTO data) {
+        return userService.delete(id, data);
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.stock.docs.StockDocs;
+import org.wita.erp.domain.entities.stock.dtos.DeleteStockRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.StockMovementDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateStockRequestDTO;
 import org.wita.erp.services.stock.StockService;
@@ -42,7 +43,7 @@ public class StockController implements StockDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('STOCK_DELETE')")
-    public ResponseEntity<StockMovementDTO> delete(@PathVariable UUID id) {
-        return stockService.delete(id);
+    public ResponseEntity<StockMovementDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteStockRequestDTO data) {
+        return stockService.delete(id, data);
     }
 }

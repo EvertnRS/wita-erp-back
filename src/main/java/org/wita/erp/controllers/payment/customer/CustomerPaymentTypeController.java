@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.payment.customer.docs.CustomerPaymentTypeDocs;
 import org.wita.erp.domain.entities.payment.customer.dto.CreateCustomerPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.customer.dto.CustomerPaymentTypeDTO;
+import org.wita.erp.domain.entities.payment.customer.dto.DeleteCustomerPaymentTypeRequestDTO;
 import org.wita.erp.domain.entities.payment.customer.dto.UpdateCustomerPaymentTypeRequestDTO;
 import org.wita.erp.services.payment.customer.CustomerPaymentTypeService;
 
@@ -42,7 +43,7 @@ public class CustomerPaymentTypeController implements CustomerPaymentTypeDocs {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('CUSTOMER_PAYMENT_DELETE')")
-    public ResponseEntity<CustomerPaymentTypeDTO> delete(@PathVariable UUID id) {
-        return customerPaymentService.delete(id);
+    public ResponseEntity<CustomerPaymentTypeDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteCustomerPaymentTypeRequestDTO data) {
+        return customerPaymentService.delete(id, data);
     }
 }
