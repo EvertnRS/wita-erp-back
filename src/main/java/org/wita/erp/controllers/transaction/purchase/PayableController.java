@@ -8,21 +8,21 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.CreatePayableRequestDTO;
+import org.wita.erp.controllers.transaction.purchase.docs.PayableDocs;
+import org.wita.erp.domain.entities.transaction.purchase.dtos.DeletePayableRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 import org.wita.erp.services.transaction.purchase.PayableService;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/payable")
 @RequiredArgsConstructor
-public class PayableController {
+public class PayableController implements PayableDocs {
     private final PayableService payableService;
 
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('PAYABLE_READ')")
     public ResponseEntity<Page<PayableDTO>> getAllPayable(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return payableService.getAllPayable(pageable, searchTerm);
@@ -42,7 +42,7 @@ public class PayableController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('PAYABLE_DELETE')")
-    public ResponseEntity<PayableDTO> delete(@PathVariable UUID id) {
-        return payableService.delete(id);
+    public ResponseEntity<PayableDTO> delete(@PathVariable UUID id, DeletePayableRequestDTO data) {
+        return payableService.delete(id, data);
     }
 }

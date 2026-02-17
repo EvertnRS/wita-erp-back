@@ -11,6 +11,6 @@ public interface CustomerMapper {
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateCustomerFromDTO(UpdateCustomerRequestDTO dto, @MappingTarget Customer customer);
 
-    CustomerDTO toCustomerDTO(Customer customer);
+    CustomerDTO toDTO(Customer customer);
 
 }

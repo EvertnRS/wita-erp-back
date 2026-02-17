@@ -8,6 +8,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
+import org.wita.erp.controllers.transaction.order.docs.ReceivableDocs;
 import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 import org.wita.erp.services.transaction.order.ReceivableService;
@@ -17,10 +19,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/receivable")
 @RequiredArgsConstructor
-public class ReceivableController {
+public class ReceivableController implements ReceivableDocs {
     private final ReceivableService receivableService;
 
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('RECEIVABLE_READ')")
     public ResponseEntity<Page<ReceivableDTO>> getAllReceivable(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return receivableService.getAllReceivable(pageable, searchTerm);
@@ -40,7 +42,7 @@ public class ReceivableController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('RECEIVABLE_DELETE')")
-    public ResponseEntity<ReceivableDTO> delete(@PathVariable UUID id) {
-        return receivableService.delete(id);
+    public ResponseEntity<ReceivableDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteReceivableRequestDTO data) {
+        return receivableService.delete(id, data);
     }
 }

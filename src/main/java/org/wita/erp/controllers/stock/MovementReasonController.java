@@ -8,8 +8,11 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.wita.erp.controllers.stock.docs.MovementReasonDocs;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.stock.dtos.CreateMovementReasonRequestDTO;
+import org.wita.erp.domain.entities.stock.dtos.MovementReasonDTO;
+import org.wita.erp.domain.entities.stock.dtos.DeleteMovementReasonRequestDTO;
 import org.wita.erp.domain.entities.stock.dtos.UpdateMovementReasonRequestDTO;
 import org.wita.erp.services.stock.MovementReasonService;
 
@@ -18,30 +21,30 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/movement")
 @RequiredArgsConstructor
-public class MovementReasonController {
+public class MovementReasonController implements MovementReasonDocs {
     private final MovementReasonService movementReasonService;
 
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('REASON_READ')")
-    public ResponseEntity<Page<MovementReason>> getAllMovementReason(@PageableDefault(size = 10, sort = "reason") Pageable pageable, @RequestParam(required = false) String searchTerm) {
+    public ResponseEntity<Page<MovementReasonDTO>> getAllMovementReason(@PageableDefault(size = 10, sort = "reason") Pageable pageable, @RequestParam(required = false) String searchTerm) {
         return movementReasonService.getAllMovementReason(pageable, searchTerm);
     }
 
     @PostMapping("/create")
     @PreAuthorize("hasAuthority('REASON_CREATE')")
-    public ResponseEntity<MovementReason> create(@Valid @RequestBody CreateMovementReasonRequestDTO data) {
+    public ResponseEntity<MovementReasonDTO> create(@Valid @RequestBody CreateMovementReasonRequestDTO data) {
         return movementReasonService.save(data);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('REASON_UPDATE')")
-    public ResponseEntity<MovementReason> update(@PathVariable UUID id, @RequestBody @Valid UpdateMovementReasonRequestDTO data) {
+    public ResponseEntity<MovementReasonDTO> update(@PathVariable UUID id, @RequestBody @Valid UpdateMovementReasonRequestDTO data) {
         return movementReasonService.update(id, data);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('REASON_DELETE')")
-    public ResponseEntity<MovementReason> delete(@PathVariable UUID id) {
-        return movementReasonService.delete(id);
+    public ResponseEntity<MovementReasonDTO> delete(@PathVariable UUID id, @RequestBody @Valid DeleteMovementReasonRequestDTO data) {
+        return movementReasonService.delete(id, data);
     }
 }
