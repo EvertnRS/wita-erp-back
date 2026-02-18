@@ -18,16 +18,18 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.wita.erp.domain.entities.user.Role;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.entities.user.dtos.*;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
+import org.wita.erp.domain.entities.user.role.Role;
 import org.wita.erp.domain.repositories.user.UserRepository;
+import org.wita.erp.infra.exceptions.auth.AuthException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.infra.providers.auth.AuthProvider;
 import org.wita.erp.infra.providers.email.EmailProvider;
-import org.wita.erp.services.user.observers.RequestRecoveryObserver;
+import org.wita.erp.services.user.authentication.observers.RequestRecoveryObserver;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -94,13 +96,13 @@ class AuthenticationServiceTest {
     @Test
     @DisplayName("Deve lançar exceção quando as credenciais forem inválidas")
     void shouldThrowExceptionWhenCredentialsAreInvalid() {
-        // Para o cenário de erro, criamos um Request específico com a senha errada
         AuthenticationDTO invalidAuthData = new AuthenticationDTO("admin@example.com", "senha-errada");
 
         Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(new BadCredentialsException("Bad credentials"));
+                .thenThrow(new AuthException("Bad credentials", HttpStatus.UNAUTHORIZED) {
+                });
 
-        Assertions.assertThrows(BadCredentialsException.class,
+        Assertions.assertThrows(AuthException.class,
                 () -> authenticationService.login(invalidAuthData));
 
         Mockito.verify(authProvider, Mockito.never()).generateToken(Mockito.any());

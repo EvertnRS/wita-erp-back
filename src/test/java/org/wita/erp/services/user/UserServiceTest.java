@@ -9,6 +9,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -16,18 +17,20 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.wita.erp.domain.entities.user.Role;
 import org.wita.erp.domain.entities.user.User;
+import org.wita.erp.domain.entities.user.dtos.DeleteUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
 import org.wita.erp.domain.entities.user.dtos.UserDTO;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
-import org.wita.erp.domain.repositories.user.RoleRepository;
+import org.wita.erp.domain.entities.user.role.Role;
 import org.wita.erp.domain.repositories.user.UserRepository;
+import org.wita.erp.domain.repositories.user.role.RoleRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
 
 import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
-import org.wita.erp.services.user.observers.RequestRecoveryObserver;
-import org.wita.erp.services.user.observers.ResetPasswordObserver;
+import org.wita.erp.services.user.authentication.observers.RequestRecoveryObserver;
+import org.wita.erp.services.user.authentication.observers.ResetPasswordObserver;
+import org.wita.erp.services.user.role.observers.RoleSoftDeleteObserver;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,6 +48,8 @@ class UserServiceTest {
     private RoleRepository roleRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private ApplicationEventPublisher publisher;
 
     @InjectMocks
     private UserService userService;
@@ -256,12 +261,13 @@ class UserServiceTest {
         Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
         Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(deletedUserDTO);
 
-        ResponseEntity<UserDTO> response = userService.delete(userId);
+        ResponseEntity<UserDTO> response = userService.delete(userId, new DeleteUserRequestDTO("Reason"));
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         Assertions.assertEquals(deletedUserDTO, response.getBody());
         Assertions.assertFalse(fakeUser.getActive());
         Mockito.verify(userRepository).save(fakeUser);
+        Mockito.verify(publisher, Mockito.times(2)).publishEvent(Mockito.any(Object.class));
     }
 
     @Test
@@ -269,10 +275,41 @@ class UserServiceTest {
     void shouldThrowUserExceptionWhenDeletingNonExistentUser() {
         Mockito.when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        UserException exception = Assertions.assertThrows(UserException.class, () -> userService.delete(userId));
+        UserException exception = Assertions.assertThrows(UserException.class, () -> userService.delete(userId, new DeleteUserRequestDTO("Reason")));
 
         Assertions.assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
         Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+    }
+
+    @Test
+    @DisplayName("Deve processar o soft delete de uma Role e cascatear para os usuários")
+    void shouldProcessRoleSoftDeleteSuccessfully() {
+        Long roleIdToBeDeleted = 2L;
+        RoleSoftDeleteObserver event = new RoleSoftDeleteObserver(roleIdToBeDeleted);
+
+        List<UUID> affectedUsers = List.of(UUID.randomUUID(), UUID.randomUUID());
+
+        Mockito.when(userRepository.cascadeDeleteFromRole(roleIdToBeDeleted)).thenReturn(affectedUsers);
+
+        userService.onRoleSoftDelete(event);
+
+        Mockito.verify(userRepository).cascadeDeleteFromRole(roleIdToBeDeleted);
+
+        Mockito.verify(publisher, Mockito.times(4)).publishEvent(Mockito.any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Não deve publicar eventos se nenhum usuário for afetado pelo soft delete da Role")
+    void shouldDoNothingWhenNoUsersAffectedByRoleSoftDelete() {
+        Long roleIdToBeDeleted = 99L;
+        RoleSoftDeleteObserver event = new RoleSoftDeleteObserver(roleIdToBeDeleted);
+
+        Mockito.when(userRepository.cascadeDeleteFromRole(roleIdToBeDeleted)).thenReturn(List.of());
+
+        userService.onRoleSoftDelete(event);
+
+        Mockito.verify(userRepository).cascadeDeleteFromRole(roleIdToBeDeleted);
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
     }
 
     @Test
