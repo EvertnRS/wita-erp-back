@@ -44,7 +44,7 @@ public class CustomerService {
     }
 
     public ResponseEntity<CustomerDTO> save(CreateCustomerRequestDTO data) {
-        if (customerRepository.findByEmail(data.name()) != null || customerRepository.findByCpf(data.cpf()) != null) {
+        if (customerRepository.findByEmail(data.email()) != null || customerRepository.findByCpf(data.cpf()) != null) {
             throw new CustomerException("Customer already exists", HttpStatus.CONFLICT);
         }
 

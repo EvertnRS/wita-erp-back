@@ -63,6 +63,13 @@ public class SupplierService {
         Supplier supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new SupplierException("Supplier not found", HttpStatus.NOT_FOUND));
 
+        if(data.cnpj() != null && !data.cnpj().equals(supplier.getCnpj()) && supplierRepository.findByCnpj(data.cnpj()) != null) {
+            throw new SupplierException("Another supplier with the same CNPJ already exists", HttpStatus.CONFLICT);
+        }
+        if(data.email() != null && !data.email().equals(supplier.getEmail()) && supplierRepository.findByEmail(data.email()) != null) {
+            throw new SupplierException("Another supplier with the same email already exists", HttpStatus.CONFLICT);
+        }
+
         supplierMapper.updateSupplierFromDTO(data, supplier);
         supplierRepository.save(supplier);
 
