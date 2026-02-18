@@ -5,26 +5,32 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.wita.erp.domain.entities.user.Permission;
-import org.wita.erp.domain.entities.user.Role;
-import org.wita.erp.domain.entities.user.dtos.CreateRoleRequestDTO;
+import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.user.dtos.RoleDTO;
-import org.wita.erp.domain.entities.user.dtos.UpdateRoleRequestDTO;
 import org.wita.erp.domain.entities.user.mappers.RoleMapper;
-import org.wita.erp.domain.repositories.user.PermissionRepository;
-import org.wita.erp.domain.repositories.user.RoleRepository;
+import org.wita.erp.domain.entities.user.role.Permission;
+import org.wita.erp.domain.entities.user.role.Role;
+import org.wita.erp.domain.entities.user.role.dtos.CreateRoleRequestDTO;
+import org.wita.erp.domain.entities.user.role.dtos.DeleteRoleRequestDTO;
+import org.wita.erp.domain.entities.user.role.dtos.UpdateRoleRequestDTO;
+import org.wita.erp.domain.repositories.user.role.PermissionRepository;
+import org.wita.erp.domain.repositories.user.role.RoleRepository;
 import org.wita.erp.infra.exceptions.permission.PermissionException;
 import org.wita.erp.infra.exceptions.role.RoleException;
+import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.user.role.observers.RoleSoftDeleteObserver;
 
 import java.util.HashSet;
 import java.util.List;
@@ -33,15 +39,14 @@ import java.util.Set;
 
 @ExtendWith(MockitoExtension.class)
 class RoleServiceTest {
-
     @Mock
     private RoleRepository roleRepository;
-
     @Mock
     private PermissionRepository permissionRepository;
-
     @Mock
     private RoleMapper roleMapper;
+    @Mock
+    private ApplicationEventPublisher publisher;
 
     @InjectMocks
     private RoleService roleService;
@@ -231,12 +236,12 @@ class RoleServiceTest {
     @Test
     @DisplayName("Deve inativar uma Role com sucesso")
     void shouldDeleteRoleSuccessfully() {
-        RoleDTO deletedRoleDTO = new RoleDTO(defaultRoleId, "USER",  null); // ou false, dependendo da sua regra
+        RoleDTO deletedRoleDTO = new RoleDTO(defaultRoleId, "USER",  null);
 
         Mockito.when(roleRepository.findById(defaultRoleId)).thenReturn(Optional.of(defaultRole));
         Mockito.when(roleMapper.toDTO(defaultRole)).thenReturn(deletedRoleDTO);
 
-        ResponseEntity<RoleDTO> response = roleService.delete(defaultRoleId);
+        ResponseEntity<RoleDTO> response = roleService.delete(defaultRoleId, new DeleteRoleRequestDTO("Reason"));
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         Assertions.assertEquals(deletedRoleDTO, response.getBody());
@@ -244,19 +249,52 @@ class RoleServiceTest {
 
         Mockito.verify(roleRepository).findById(defaultRoleId);
         Mockito.verify(roleRepository).save(defaultRole);
+
+        Mockito.verify(publisher, Mockito.times(2)).publishEvent(Mockito.any(Object.class));
     }
 
     @Test
     @DisplayName("Deve lançar RoleException ao tentar deletar uma Role inexistente")
     void shouldThrowRoleExceptionWhenDeletingNonExistentRole() {
         Long invalidRoleId = 99L;
-
         Mockito.when(roleRepository.findById(invalidRoleId)).thenReturn(Optional.empty());
 
         RoleException exception = Assertions.assertThrows(RoleException.class,
-                () -> roleService.delete(invalidRoleId));
+                () -> roleService.delete(invalidRoleId, new DeleteRoleRequestDTO("Reason")));
 
         Assertions.assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
         Mockito.verify(roleRepository, Mockito.never()).save(Mockito.any(Role.class));
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Deve publicar o evento de auditoria de soft delete da Role com os dados corretos")
+    void shouldAuditRoleSoftDelete() {
+        String reason = "Limpeza de base de dados";
+
+        roleService.auditRoleSoftDelete(defaultRoleId, reason);
+
+        ArgumentCaptor<SoftDeleteLogObserver> eventCaptor = ArgumentCaptor.forClass(SoftDeleteLogObserver.class);
+        Mockito.verify(publisher).publishEvent(eventCaptor.capture());
+
+        SoftDeleteLogObserver capturedEvent = eventCaptor.getValue();
+
+        Assertions.assertEquals(defaultRoleId.toString(), capturedEvent.entityId());
+        Assertions.assertEquals(EntityType.ROLE.getEntityType(), capturedEvent.entityType());
+        Assertions.assertEquals(reason, capturedEvent.reason());
+    }
+
+    @Test
+    @DisplayName("Deve publicar o evento de deleção em cascata da Role com o ID correto")
+    void shouldPublishRoleCascadeDelete() {
+
+        roleService.roleCascadeDelete(defaultRoleId);
+
+        ArgumentCaptor<RoleSoftDeleteObserver> eventCaptor = ArgumentCaptor.forClass(RoleSoftDeleteObserver.class);
+        Mockito.verify(publisher).publishEvent(eventCaptor.capture());
+
+        RoleSoftDeleteObserver capturedEvent = eventCaptor.getValue();
+
+        Assertions.assertEquals(defaultRoleId, capturedEvent.role());
     }
 }
