@@ -70,6 +70,7 @@ class ProductServiceTest {
     private Category fakeCategory;
     private Supplier fakeSupplier;
     private Pageable pageable;
+    private Page<Product> fakePage;
     private ProductDTO fakeProductDTO;
     private CreateProductRequestDTO fakeCreateDTO;
     private UpdateProductRequestDTO fakeUpdateDTO;
@@ -98,25 +99,41 @@ class ProductServiceTest {
         fakeProduct.setSupplier(fakeSupplier);
         fakeProduct.setActive(true);
 
+        fakePage = new PageImpl<>(List.of(fakeProduct));
+
         fakeProductDTO = new ProductDTO(productId, "Notebook", new BigDecimal("100.00"), BigDecimal.ZERO, 0, 10, 50, null, null, null, true);
         fakeCreateDTO = new CreateProductRequestDTO("Notebook", new BigDecimal("100.00"), BigDecimal.ZERO, 0, 10, 50, categoryId, supplierId);
         fakeUpdateDTO = new UpdateProductRequestDTO("Notebook Updated", null, null, null, categoryId, supplierId);
     }
 
     @Test
-    @DisplayName("Deve retornar todos os produtos quando searchTerm for nulo")
-    void shouldReturnAllProducts() {
-        Page<Product> page = new PageImpl<>(List.of(fakeProduct));
-        Mockito.when(productRepository.findAll(pageable)).thenReturn(page);
+    @DisplayName("Deve retornar todos os produtos quando o searchTerm for nulo")
+    void shouldReturnAllProductsWhenSearchTermIsNull() {
+        Mockito.when(productRepository.findAll(pageable)).thenReturn(fakePage);
         Mockito.when(productMapper.toDTO(fakeProduct)).thenReturn(fakeProductDTO);
 
         ResponseEntity<Page<ProductDTO>> response = productService.getAllProducts(pageable, null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Mockito.verify(productRepository).findAll(pageable);
         Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(1, response.getBody().getContent().size());
-        Assertions.assertEquals(fakeProductDTO, response.getBody().getContent().get(0));
+        Assertions.assertEquals(1, response.getBody().getTotalElements());
+        Mockito.verify(productRepository).findAll(pageable);
+        Mockito.verify(productRepository, Mockito.never()).findBySearchTerm(Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Deve retornar produtos filtrados pelo searchTerm")
+    void shouldReturnProductsFilteredBySearchTerm() {
+        Mockito.when(productRepository.findBySearchTerm("Notebook", pageable)).thenReturn(fakePage);
+        Mockito.when(productMapper.toDTO(fakeProduct)).thenReturn(fakeProductDTO);
+
+        ResponseEntity<Page<ProductDTO>> response = productService.getAllProducts(pageable, "Notebook");
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertNotNull(response.getBody());
+        Assertions.assertEquals(1, response.getBody().getTotalElements());
+        Mockito.verify(productRepository).findBySearchTerm("Notebook", pageable);
+        Mockito.verify(productRepository, Mockito.never()).findAll(Mockito.any(Pageable.class));
     }
 
     @Test
