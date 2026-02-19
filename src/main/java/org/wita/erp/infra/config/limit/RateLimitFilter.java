@@ -1,4 +1,4 @@
-package org.wita.erp.infra.security;
+package org.wita.erp.infra.config.limit;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
