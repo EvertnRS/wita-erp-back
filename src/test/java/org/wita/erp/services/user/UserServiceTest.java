@@ -20,14 +20,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.entities.user.dtos.DeleteUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
+import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.UserDTO;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
 import org.wita.erp.domain.entities.user.role.Role;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.domain.repositories.user.role.RoleRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
-
-import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
 import org.wita.erp.services.user.authentication.observers.RequestRecoveryObserver;
 import org.wita.erp.services.user.authentication.observers.ResetPasswordObserver;
 import org.wita.erp.services.user.role.observers.RoleSoftDeleteObserver;

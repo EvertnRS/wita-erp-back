@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,26 @@ public class SMTPProvider implements EmailProvider {
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(html, true);
+
+        mailSender.send(message);
+    }
+
+    public void sendEmail(String to, String subject, String html, byte[] qrcode) throws MessagingException{
+        MimeMessage message = mailSender.createMimeMessage();
+
+        MimeMessageHelper helper =
+                new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom(email);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(html, true);
+
+        helper.addInline(
+                "qrcode",
+                new ByteArrayResource(qrcode),
+                "image/png"
+        );
 
         mailSender.send(message);
     }
@@ -78,6 +99,19 @@ public class SMTPProvider implements EmailProvider {
         return template;
     }
 
+    public String buildEnable2FATemplate(String title, String message, String agentName, String deviceClass,
+                           String userName, String dateTime){
+        String template = loadTemplate("/templates/enable2FATemplate.html");
+
+        template = template.replace("{{TITLE}}", title);
+        template = template.replace("{{MESSAGE}}", message);
+        template = template.replace("{{AGENT_NAME}}", agentName);
+        template = template.replace("{{DEVICE_CLASS}}", deviceClass);
+        template = template.replace("{{USER_NAME}}", userName);
+        template = template.replace("{{DATETIME}}", dateTime);
+
+        return template;
+    }
 
     private String loadTemplate(String path) {
         try (InputStream is = getClass().getResourceAsStream(path)) {
