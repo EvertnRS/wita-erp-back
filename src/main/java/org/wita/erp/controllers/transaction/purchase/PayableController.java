@@ -9,8 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.transaction.purchase.docs.PayableDocs;
+import org.wita.erp.domain.entities.transaction.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.DeletePayableRequestDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 import org.wita.erp.services.transaction.purchase.PayableService;
 
