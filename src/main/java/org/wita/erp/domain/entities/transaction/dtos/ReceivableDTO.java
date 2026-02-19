@@ -1,4 +1,4 @@
-package org.wita.erp.domain.entities.transaction.order.dtos;
+package org.wita.erp.domain.entities.transaction.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.wita.erp.domain.entities.payment.customer.dto.CustomerPaymentTypeDTO;
@@ -28,5 +28,5 @@ public record ReceivableDTO(
         Boolean active,
         @Schema(description = "Day the receivable was created", example = "2024-01-01T12:00:00")
         LocalDateTime createdAt
-) {
+) implements AccountsDTO {
 }

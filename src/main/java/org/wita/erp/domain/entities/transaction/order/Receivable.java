@@ -41,8 +41,12 @@ public class Receivable {
     private Order order;
 
     @Min(1)
-    @Column(nullable = false, updatable = false)
+    @Column(updatable = false)
     private Integer installment;
+
+    @FutureOrPresent
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 
     @Column(nullable = false)
     private Boolean active = true;
