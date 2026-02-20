@@ -9,8 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.transaction.docs.TransactionDocs;
-import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
+import org.wita.erp.domain.entities.transaction.dtos.AccountsDTO;
 import org.wita.erp.domain.entities.transaction.dtos.DeleteTransactionRequestDTO;
 import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
 import org.wita.erp.services.transaction.TransactionService;
@@ -27,6 +27,12 @@ public class TransactionController implements TransactionDocs {
     @PreAuthorize("hasAuthority('ORDER_READ') and hasAuthority('PURCHASE_READ')")
     public ResponseEntity<Page<TransactionDTO>> getAllTransactions(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable, @RequestParam(required = false) TransactionType transactionType) {
         return transactionService.getAllTransactions(pageable, transactionType);
+    }
+
+    @GetMapping("/accounts")
+    @PreAuthorize("hasAuthority('REPORT_READ')")
+    public ResponseEntity<Page<AccountsDTO>> getAllAccounts(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+        return transactionService.getAllAccounts(pageable);
     }
 
     @DeleteMapping("/{id}")

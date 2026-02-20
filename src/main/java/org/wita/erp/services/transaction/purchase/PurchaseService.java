@@ -131,15 +131,8 @@ public class PurchaseService {
 
         purchaseRepository.save(purchase);
 
-        if(data.installments() != null){
-            publisher.publishEvent(
-                    new CreatePayablePurchaseObserver(purchase.getId())
-            );
-        }
-
-        publisher.publishEvent(
-                new CreatePurchaseObserver(purchase.getId(), movementReason.getId())
-        );
+        publisher.publishEvent(new CreatePayablePurchaseObserver(purchase.getId()));
+        publisher.publishEvent(new CreatePurchaseObserver(purchase.getId(), movementReason.getId()));
 
         Purchase saved = purchaseRepository
                 .findByIdWithItems(purchase.getId())
@@ -188,11 +181,7 @@ public class PurchaseService {
 
         purchaseRepository.save(purchase);
 
-        if(data.installments() != null){
-            publisher.publishEvent(
-                    new CreatePayablePurchaseObserver(purchase.getId())
-            );
-        }
+        publisher.publishEvent(new CreatePayablePurchaseObserver(purchase.getId()));
 
         return ResponseEntity.ok(purchaseMapper.toDTO(purchase));
     }
@@ -201,6 +190,12 @@ public class PurchaseService {
     public ResponseEntity<PurchaseDTO> update(UUID id, UpdatePurchaseRequestDTO data) {
         Purchase purchase = purchaseRepository.findById(id)
                 .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
+
+        if((!purchase.getPaymentStatus().allowsManualUpdate() ||
+            payableRepository.findDistinctStatusesByPurchaseId(purchase.getId()).size() > 1) &&
+        data.paymentStatus() != PaymentStatus.REFUNDED){
+            throw new PurchaseException("This purchase has already been finalized", HttpStatus.BAD_REQUEST);
+        }
 
         if (purchaseRepository.findByTransactionCode(data.transactionCode()) != null) {
             throw new PurchaseException("Transaction code already exists", HttpStatus.BAD_REQUEST);
@@ -431,10 +426,6 @@ public class PurchaseService {
     }
 
     private void handlePaymentStatusUpdate(UpdatePurchaseRequestDTO data, Purchase purchase) {
-        if(!purchase.getPaymentStatus().allowsManualUpdate()){
-            throw new PurchaseException("This Payment status cannot be updated manually", HttpStatus.BAD_REQUEST);
-        }
-
         if (purchase.getPaymentStatus().isReversal() && data.paymentStatus().isReversal()){
             throw new PurchaseException("Purchase is already in reversal status", HttpStatus.BAD_REQUEST);
         }
@@ -445,7 +436,7 @@ public class PurchaseService {
             throw new PurchaseException("Cannot set manually purchase to this payment status", HttpStatus.BAD_REQUEST);
         }
 
-        validatePaymentStatusInstallmentsPurchase(purchase, data.paymentStatus());
+        validatePayablePaymentStatus(purchase, data.paymentStatus());
         validatePaymentStatusReplacementPurchase(purchase, data.paymentStatus(), data);
 
         if (data.paymentStatus() == PaymentStatus.PAID) {
@@ -455,11 +446,9 @@ public class PurchaseService {
         purchase.setPaymentStatus(data.paymentStatus());
     }
 
-    private void validatePaymentStatusInstallmentsPurchase(Purchase purchase, PaymentStatus newStatus){
-        if (purchase.getInstallments() != null) {
-            this.validatePaymentStatusTransition(purchase, newStatus);
-            publisher.publishEvent(new PurchaseStatusChangedObserver(purchase.getId(), newStatus));
-        }
+    private void validatePayablePaymentStatus(Purchase purchase, PaymentStatus newStatus){
+        this.validatePaymentStatusTransition(purchase, newStatus);
+        publisher.publishEvent(new PurchaseStatusChangedObserver(purchase.getId(), newStatus));
     }
 
     private void validatePaymentStatusReplacementPurchase(Purchase purchase, PaymentStatus newStatus, UpdatePurchaseRequestDTO data){
@@ -499,11 +488,9 @@ public class PurchaseService {
                 payableRepository.findDistinctStatusesByPurchaseId(purchase.getId());
 
         switch (newStatus) {
-
             case PAID ->
                 throw new PurchaseException("Cannot set manually purchase with installments to this payment status",
                         HttpStatus.BAD_REQUEST);
-
 
             case CANCELED -> {
                 if (statuses.contains(PaymentStatus.PAID)

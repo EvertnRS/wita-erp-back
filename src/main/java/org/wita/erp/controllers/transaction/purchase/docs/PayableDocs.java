@@ -11,8 +11,8 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.wita.erp.domain.entities.transaction.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.DeletePayableRequestDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 
 import java.util.UUID;

@@ -61,6 +61,10 @@ public class CategoryService {
                 .orElseThrow(() -> new CategoryException("Category not found", HttpStatus.NOT_FOUND));
 
         if(data.name() != null) {
+            Category existingCategory = categoryRepository.findByName(data.name());
+            if (existingCategory != null && !existingCategory.getId().equals(id)) {
+                throw new CategoryException("Another category with the same name already exists", HttpStatus.CONFLICT);
+            }
             category.setName(data.name());
         }
 

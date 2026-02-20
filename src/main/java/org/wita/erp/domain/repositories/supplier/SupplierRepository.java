@@ -1,5 +1,6 @@
 package org.wita.erp.domain.repositories.supplier;
 
+import jakarta.validation.constraints.Email;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,4 +17,6 @@ public interface SupplierRepository extends JpaRepository<Supplier, UUID> {
     Page<Supplier> findBySearchTerm(String searchTerm, Pageable pageable);
 
     Supplier findByCnpj(String cnpj);
+
+    Supplier findByEmail(@Email String email);
 }

@@ -10,11 +10,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
+import org.wita.erp.domain.entities.transaction.dtos.AccountsDTO;
 import org.wita.erp.domain.entities.transaction.dtos.DeleteTransactionRequestDTO;
 import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
 import org.wita.erp.domain.entities.transaction.order.Order;
+import org.wita.erp.domain.entities.transaction.order.Receivable;
 import org.wita.erp.domain.entities.transaction.order.mappers.OrderMapper;
+import org.wita.erp.domain.entities.transaction.order.mappers.ReceivableMapper;
+import org.wita.erp.domain.entities.transaction.purchase.Payable;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
+import org.wita.erp.domain.entities.transaction.purchase.mappers.PayableMapper;
 import org.wita.erp.domain.entities.transaction.purchase.mappers.PurchaseMapper;
 import org.wita.erp.domain.repositories.transaction.TransactionRepository;
 import org.wita.erp.infra.exceptions.transaction.TransactionException;
@@ -28,6 +33,8 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final OrderMapper orderMapper;
     private final PurchaseMapper purchaseMapper;
+    private final ReceivableMapper receivableMapper;
+    private final PayableMapper payableMapper;
     private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
@@ -55,6 +62,22 @@ public class TransactionService {
 
             return ResponseEntity.ok(dtoPage);
         }
+    }
+
+    @Transactional(readOnly = true)
+    public ResponseEntity<Page<AccountsDTO>> getAllAccounts(Pageable pageable) {
+        var accountsPage = transactionRepository.findAllAccounts(pageable);
+
+        Page<AccountsDTO> dtoPage = accountsPage.map(account ->
+                switch (account) {
+                    case Receivable receivable -> receivableMapper.toDTO(receivable);
+                    case Payable payable -> payableMapper.toDTO(payable);
+                    default ->
+                            throw new TransactionException("Unexpected value: " + account, HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            );
+
+        return ResponseEntity.ok(dtoPage);
     }
 
     public ResponseEntity<TransactionDTO> delete(UUID id, DeleteTransactionRequestDTO data) {
