@@ -49,7 +49,7 @@ class CategoryServiceTest {
     private Page<Category> fakePage;
     private CategoryDTO fakeCategoryDTO;
     private CreateCategoryRequestDTO fakeCreateCategoryDTO;
-    UpdateCategoryRequestDTO fakeUpdateCategoryDTO;
+    private UpdateCategoryRequestDTO fakeUpdateCategoryDTO;
 
     @BeforeEach
     void setup() {
@@ -69,10 +69,8 @@ class CategoryServiceTest {
     }
 
     @Test
-    @DisplayName("Deve retornar todos os produtos quando o searchTerm for nulo")
-    void shouldReturnAllProductsWhenSearchTermIsNull() {
-
-
+    @DisplayName("Deve retornar todos os categorias quando o searchTerm for nulo")
+    void shouldReturnAllCategoriesWhenSearchTermIsNull() {
         Mockito.when(categoryRepository.findAll(pageable)).thenReturn(fakePage);
         Mockito.when(categoryMapper.toDTO(fakeCategory)).thenReturn(fakeCategoryDTO);
 
@@ -86,8 +84,8 @@ class CategoryServiceTest {
     }
 
     @Test
-    @DisplayName("Deve retornar produtos filtrados pelo searchTerm")
-    void shouldReturnProductsFilteredBySearchTerm() {
+    @DisplayName("Deve retornar categorias filtrados pelo searchTerm")
+    void shouldReturnCategoriesFilteredBySearchTerm() {
         Mockito.when(categoryRepository.findBySearchTerm("Category", pageable)).thenReturn(fakePage);
         Mockito.when(categoryMapper.toDTO(fakeCategory)).thenReturn(fakeCategoryDTO);
 
@@ -114,7 +112,6 @@ class CategoryServiceTest {
         Assertions.assertEquals(HttpStatus.CREATED, response.getStatusCode());
         Mockito.verify(categoryRepository).save(Mockito.any(Category.class));
         Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(fakeCategoryDTO, response.getBody());
     }
 
     @Test

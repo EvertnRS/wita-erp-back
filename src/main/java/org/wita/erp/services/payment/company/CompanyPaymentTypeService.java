@@ -52,7 +52,6 @@ public class CompanyPaymentTypeService {
         CompanyPaymentType companyPaymentType = getCompanyPaymentType(data);
 
         ResponseEntity<PaymentType> response = paymentTypeService.save(companyPaymentType, new CreatePaymentTypeRequestDTO(
-
                 data.isImmediate(),
                 data.allowsInstallments()
         ));
