@@ -1,4 +1,4 @@
-package org.wita.erp.domain.entities.transaction.purchase.dtos;
+package org.wita.erp.domain.entities.transaction.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
@@ -26,5 +26,5 @@ public record PayableDTO(
         @Schema(description = "Indicates whether the payable is active", example = "true")
         Boolean active,
         @Schema(description = "Date when the payable was created", example = "2024-06-30T12:34:56")
-        LocalDateTime createdAt) {
+        LocalDateTime createdAt) implements AccountsDTO {
 }

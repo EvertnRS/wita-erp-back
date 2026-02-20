@@ -54,6 +54,27 @@ public class SMTPProvider implements EmailProvider {
         mailSender.send(message);
     }
 
+    public void sendEmail(String to, String subject, String html, String attachmentFilename, String contentType, byte[] fileBytes) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+
+        MimeMessageHelper helper =
+                new MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setFrom(email);
+        helper.setTo(to);
+        helper.setSubject(subject);
+        helper.setText(html, true);
+
+        helper.addAttachment(
+                attachmentFilename,
+                new ByteArrayResource(fileBytes),
+                contentType
+        );
+
+        mailSender.send(message);
+    }
+
+
     public String buildRecoveryPasswordTemplate(String title, String message, String agentName, String deviceClass,
                                 String userName, String dateTime, String buttonText, String buttonUrl) {
         String template = loadTemplate("/templates/recoveryPasswordTemplate.html");
@@ -102,6 +123,20 @@ public class SMTPProvider implements EmailProvider {
     public String buildEnable2FATemplate(String title, String message, String agentName, String deviceClass,
                            String userName, String dateTime){
         String template = loadTemplate("/templates/enable2FATemplate.html");
+
+        template = template.replace("{{TITLE}}", title);
+        template = template.replace("{{MESSAGE}}", message);
+        template = template.replace("{{AGENT_NAME}}", agentName);
+        template = template.replace("{{DEVICE_CLASS}}", deviceClass);
+        template = template.replace("{{USER_NAME}}", userName);
+        template = template.replace("{{DATETIME}}", dateTime);
+
+        return template;
+    }
+
+    public String buildReportExport(String title, String message, String agentName, String deviceClass,
+                                         String userName, String dateTime){
+        String template = loadTemplate("/templates/reportExport.html");
 
         template = template.replace("{{TITLE}}", title);
         template = template.replace("{{MESSAGE}}", message);

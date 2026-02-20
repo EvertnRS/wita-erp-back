@@ -1,7 +1,5 @@
 package org.wita.erp.services.transaction.purchase;
 
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -11,16 +9,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.transaction.PaymentStatus;
+import org.wita.erp.domain.entities.transaction.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.Payable;
 import org.wita.erp.domain.entities.transaction.purchase.Purchase;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.CreatePayableRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.DeletePayableRequestDTO;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 import org.wita.erp.domain.entities.transaction.purchase.mappers.PayableMapper;
 import org.wita.erp.domain.repositories.transaction.purchase.PayableRepository;
@@ -62,12 +61,12 @@ public class PayableService {
         return ResponseEntity.ok(payablePage.map(payableMapper::toDTO));
     }
 
-    public ResponseEntity<List<PayableDTO>> save(CreatePayableRequestDTO data){
+    public ResponseEntity<List<PayableDTO>> saveInstallmentsPayable(CreatePayableRequestDTO data){
         Purchase purchase = purchaseRepository.findById(data.purchase())
                 .orElseThrow(() -> new PurchaseException("Purchase not registered in the system", HttpStatus.NOT_FOUND));
 
         if (purchase.getCompanyPaymentType().getIsImmediate()){
-            throw new PayableException("Cannot create payable for immediate payment purchases", HttpStatus.BAD_REQUEST);
+            throw new PayableException("Cannot create installments payable for immediate payment purchases", HttpStatus.BAD_REQUEST);
         }
         BigDecimal installmentValue = purchase.getValue().divide(BigDecimal.valueOf(purchase.getInstallments()), 2, RoundingMode.HALF_UP);
         int closingDay = purchase.getCompanyPaymentType().getClosingDay();
@@ -109,6 +108,26 @@ public class PayableService {
                 .toList();
 
         return ResponseEntity.ok(dtos);
+    }
+
+    public ResponseEntity<PayableDTO> saveImmediatePayable(CreatePayableRequestDTO data){
+        Purchase purchase = purchaseRepository.findById(data.purchase())
+                .orElseThrow(() -> new PurchaseException("Purchase not registered in the system", HttpStatus.NOT_FOUND));
+
+        if (purchase.getInstallments() != null){
+            throw new PayableException("Cannot create immediate payable for installments payment purchases", HttpStatus.BAD_REQUEST);
+        }
+
+        Payable payable = new Payable();
+        payable.setPurchase(purchase);
+        payable.setPaymentStatus(data.paymentStatus());
+        payable.setValue(purchase.getValue());
+        payable.setDueDate(LocalDate.now());
+        payable.setPaidAt(purchase.getPaidAt());
+
+        payableRepository.save(payable);
+
+        return ResponseEntity.ok(payableMapper.toDTO(payable));
     }
 
     public ResponseEntity<PayableDTO> update(UUID id, UpdatePayableRequestDTO data) {
@@ -200,15 +219,16 @@ public class PayableService {
     @Async
     public void onPayablePurchaseCreated(CreatePayablePurchaseObserver event) {
         try{
-            purchaseRepository.findById(event.purchase())
+            Purchase purchase = purchaseRepository.findById(event.purchase())
                     .orElseThrow(() -> new PurchaseException("Purchase not found", HttpStatus.NOT_FOUND));
 
-            CreatePayableRequestDTO dto = new CreatePayableRequestDTO(
-                    PaymentStatus.PENDING,
-                    event.purchase()
-            );
+            CreatePayableRequestDTO dto = new CreatePayableRequestDTO(purchase.getPaymentStatus(), event.purchase());
 
-            this.save(dto);
+            if(purchase.getInstallments() != null){
+                this.saveInstallmentsPayable(dto);
+            } else{
+                this.saveImmediatePayable(dto);
+            }
 
         } catch (Exception e) {
             publisher.publishEvent(new PayableCompensationObserver(event.purchase()));
@@ -242,7 +262,7 @@ public class PayableService {
                     )
             );
 
-            this.save(new CreatePayableRequestDTO(
+            this.saveInstallmentsPayable(new CreatePayableRequestDTO(
                     PaymentStatus.PENDING,
                     purchase.getId()
             ));

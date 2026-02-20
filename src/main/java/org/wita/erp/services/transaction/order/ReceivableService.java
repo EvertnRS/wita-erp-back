@@ -1,7 +1,5 @@
 package org.wita.erp.services.transaction.order;
 
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
@@ -11,15 +9,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.audit.EntityType;
 import org.wita.erp.domain.entities.transaction.PaymentStatus;
+import org.wita.erp.domain.entities.transaction.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.Receivable;
 import org.wita.erp.domain.entities.transaction.order.dtos.CreateReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
-import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.mappers.ReceivableMapper;
 import org.wita.erp.domain.repositories.transaction.order.OrderRepository;
@@ -37,6 +37,7 @@ import org.wita.erp.services.transaction.order.observers.ReceivableCompensationO
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -63,7 +64,7 @@ public class ReceivableService {
         return ResponseEntity.ok(receivablePage.map(receivableMapper::toDTO));
     }
 
-    public ResponseEntity<List<ReceivableDTO>> save(CreateReceivableRequestDTO data){
+    public ResponseEntity<List<ReceivableDTO>> saveInstallmentsReceivable(CreateReceivableRequestDTO data){
         Order order = orderRepository.findById(data.order())
                 .orElseThrow(() -> new OrderException("Order not registered in the system", HttpStatus.NOT_FOUND));
 
@@ -112,6 +113,26 @@ public class ReceivableService {
         return ResponseEntity.ok(dtos);
     }
 
+    public ResponseEntity<ReceivableDTO> saveImmediateReceivable(CreateReceivableRequestDTO data){
+        Order order = orderRepository.findById(data.order())
+                .orElseThrow(() -> new OrderException("Order not registered in the system", HttpStatus.NOT_FOUND));
+
+        if (order.getInstallments() != null){
+            throw new ReceivableException("Cannot create immediate payable for installments payment orders", HttpStatus.BAD_REQUEST);
+        }
+
+        Receivable receivable = new Receivable();
+        receivable.setOrder(order);
+        receivable.setPaymentStatus(data.paymentStatus());
+        receivable.setValue(order.getValue());
+        receivable.setDueDate(LocalDate.now());
+        receivable.setPaidAt(order.getPaidAt());
+
+        receivableRepository.save(receivable);
+
+        return ResponseEntity.ok(receivableMapper.toDTO(receivable));
+    }
+
     public ResponseEntity<ReceivableDTO> update(UUID id, UpdateReceivableRequestDTO data) {
         Receivable receivable = receivableRepository.findById(id)
                 .orElseThrow(() -> new ReceivableException("Receivable not found", HttpStatus.NOT_FOUND));
@@ -144,6 +165,17 @@ public class ReceivableService {
 
         if (!statusChanging && dueDateChanging) {
             rescheduleTasks(receivable.getId(), newDueDate);
+        }
+
+        if(newStatus == PaymentStatus.PAID){
+            receivable.setPaidAt(LocalDateTime.now());
+
+            List<PaymentStatus> statuses =
+                    receivableRepository.findDistinctStatusesByOrderId(receivable.getOrder().getId());
+
+            if(statuses.size() == 1 && statuses.contains(PaymentStatus.PAID)){
+                publisher.publishEvent(new OrderStatusChangedObserver(receivable.getOrder().getId(), PaymentStatus.PAID));
+            }
         }
 
         receivableMapper.updateReceivableFromDTO(data, receivable);
@@ -185,15 +217,16 @@ public class ReceivableService {
     @Async
     public void onReceivableOrderCreated(CreateReceivableOrderObserver event) {
         try{
-            orderRepository.findById(event.order())
+            Order order = orderRepository.findById(event.order())
                     .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
-            CreateReceivableRequestDTO dto = new CreateReceivableRequestDTO(
-                    PaymentStatus.PENDING,
-                    event.order()
-            );
+            CreateReceivableRequestDTO dto = new CreateReceivableRequestDTO(order.getPaymentStatus(), event.order());
 
-            this.save(dto);
+            if(order.getInstallments() != null){
+                this.saveInstallmentsReceivable(dto);
+            } else{
+                this.saveImmediateReceivable(dto);
+            }
 
         } catch (Exception e) {
             publisher.publishEvent(new ReceivableCompensationObserver(event.order()));
@@ -227,7 +260,7 @@ public class ReceivableService {
                     )
             );
 
-            this.save(new CreateReceivableRequestDTO(
+            this.saveInstallmentsReceivable(new CreateReceivableRequestDTO(
                     PaymentStatus.PENDING,
                     order.getId()
             ));
