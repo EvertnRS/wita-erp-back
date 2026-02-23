@@ -166,7 +166,7 @@ public class SMTPProvider implements EmailProvider {
                         "TITLE", title,
                         "MESSAGE", message,
                         "AGENT_NAME", agentName,
-                        "DATE", date,
+                        "DATETIME", date,
                         "BUTTON_TEXT", buttonText,
                         "BUTTON_URL", buttonUrl
                 )
