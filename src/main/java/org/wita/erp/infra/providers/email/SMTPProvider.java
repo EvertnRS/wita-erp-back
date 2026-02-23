@@ -148,6 +148,18 @@ public class SMTPProvider implements EmailProvider {
         return template;
     }
 
+    public String buildVerifyEmailTemplate(String title, String message, String agentName, String date, String buttonText, String buttonUrl) {
+        String template = loadTemplate("/templates/verifyEmailTemplate.html");
+        template = template.replace("{{TITLE}}", title);
+        template = template.replace("{{MESSAGE}}", message);
+        template = template.replace("{{AGENT_NAME}}", agentName);
+        template = template.replace("{{DATETIME}}", date);
+        template = template.replace("{{BUTTON_TEXT}}", buttonText);
+        template = template.replace("{{BUTTON_URL}}", buttonUrl);
+
+        return template;
+    }
+
     private String loadTemplate(String path) {
         try (InputStream is = getClass().getResourceAsStream(path)) {
             assert is != null;

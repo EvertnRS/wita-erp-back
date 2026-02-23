@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.wita.erp.domain.entities.report.ReportRange;
 import org.wita.erp.domain.entities.report.ReportType;
 import org.wita.erp.domain.entities.report.dto.AccountReport;
-import org.wita.erp.domain.entities.report.dto.RequestGenerateReportDTO;
+import org.wita.erp.domain.entities.report.dto.GenerateReportRequestDTO;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.report.ReportRepository;
 import org.wita.erp.infra.exceptions.report.ReportException;
@@ -32,7 +32,7 @@ public class ReportService {
     private final EmailProvider emailProvider;
 
     @Transactional(readOnly = true)
-    public byte[] getSheetReport(RequestGenerateReportDTO data, String userAgent) throws MessagingException {
+    public byte[] getSheetReport(GenerateReportRequestDTO data, String userAgent) throws MessagingException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = (User) authentication.getPrincipal();

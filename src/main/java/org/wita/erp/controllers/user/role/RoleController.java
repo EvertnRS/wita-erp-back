@@ -8,9 +8,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.user.docs.RoleDocs;
-import org.wita.erp.domain.entities.user.dtos.RoleDTO;
 import org.wita.erp.domain.entities.user.role.dtos.CreateRoleRequestDTO;
 import org.wita.erp.domain.entities.user.role.dtos.DeleteRoleRequestDTO;
+import org.wita.erp.domain.entities.user.role.dtos.RoleDTO;
 import org.wita.erp.domain.entities.user.role.dtos.UpdateRoleRequestDTO;
 import org.wita.erp.services.user.role.RoleService;
 

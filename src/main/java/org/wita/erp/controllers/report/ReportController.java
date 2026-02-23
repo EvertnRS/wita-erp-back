@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.wita.erp.controllers.report.docs.ReportDocs;
-import org.wita.erp.domain.entities.report.dto.RequestGenerateReportDTO;
+import org.wita.erp.domain.entities.report.dto.GenerateReportRequestDTO;
 import org.wita.erp.services.report.ReportService;
 
 @RestController
@@ -22,7 +22,7 @@ public class ReportController implements ReportDocs {
 
     @GetMapping("/sheet")
     @PreAuthorize("hasAuthority('REPORT_EXPORT')")
-    public ResponseEntity<byte[]> exportSheetReport(@RequestHeader(value = "User-Agent", required = false) String userAgent, RequestGenerateReportDTO data) throws MessagingException {
+    public ResponseEntity<byte[]> exportSheetReport(@RequestHeader(value = "User-Agent", required = false) String userAgent, GenerateReportRequestDTO data) throws MessagingException {
         byte[] file = reportService.getSheetReport(data, userAgent);
 
         return ResponseEntity.ok()

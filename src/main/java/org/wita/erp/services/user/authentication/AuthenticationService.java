@@ -16,7 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.entities.user.authentication.UserAuthentication;
-import org.wita.erp.domain.entities.user.dtos.*;
+import org.wita.erp.domain.entities.user.authentication.dtos.*;
+import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
+import org.wita.erp.domain.entities.user.dtos.UserDTO;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.domain.repositories.user.authentication.UserAuthenticationRepository;
@@ -26,8 +28,9 @@ import org.wita.erp.infra.providers.auth.AuthProvider;
 import org.wita.erp.infra.providers.email.EmailProvider;
 import org.wita.erp.infra.providers.twofactor.TwoFactorAuthenticationProvider;
 import org.wita.erp.infra.providers.twofactor.TwoFactorAuthenticationToken;
-import org.wita.erp.services.user.authentication.observers.RequestRecoveryObserver;
+import org.wita.erp.services.user.authentication.observers.RecoveryRequestObserver;
 import org.wita.erp.services.user.authentication.observers.ResetPasswordObserver;
+import org.wita.erp.services.user.authentication.observers.VerifyEmailObserver;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -64,6 +67,10 @@ public class AuthenticationService {
         var userAuth = userAuthenticationRepository.findByUserId(user.getId())
                 .orElse(null);
 
+        if(!user.getActive()){
+            throw new AuthException("User account is inactive", HttpStatus.FORBIDDEN);
+        }
+
         if (userAuth != null && userAuth.getSecret() != null) {
             var twoFactorToken = authProvider.generateTwoFactorToken(user);
 
@@ -75,7 +82,20 @@ public class AuthenticationService {
         return ResponseEntity.ok(new LoginResponseDTO(userMapper.toUserDTO(user), token, false));
     }
 
-    public ResponseEntity<RecoveryResponseDTO> requestRecovery(RequestRecoveryDTO data, String userAgent) throws MessagingException {
+    public ResponseEntity<VerifyEmailResponseDTO> verifyEmail(VerifyEmailRequestDTO data, String token){
+        User user = userRepository.findByVerifyEmailToken(token)
+                .orElseThrow(() -> new UserException("Invalid verification token", HttpStatus.BAD_REQUEST));
+
+        if (user.getVerifyEmailTokenExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new UserException("Verification token has expired", HttpStatus.BAD_REQUEST);
+        }
+
+        publisher.publishEvent(new VerifyEmailObserver(user, passwordEncoder.encode(data.password())));
+
+        return new ResponseEntity<>(new VerifyEmailResponseDTO("Email verified successfully"), HttpStatus.OK);
+    }
+
+    public ResponseEntity<RecoveryResponseDTO> requestRecovery(RecoveryRequestDTO data, String userAgent) throws MessagingException {
         User user = userRepository.findByEmail(data.email())
                 .orElseThrow(() -> new UserException("User not found", HttpStatus.NOT_FOUND));
 
@@ -100,12 +120,12 @@ public class AuthenticationService {
 
         emailProvider.sendEmail(data.email(), "Redefinição de senha", template);
 
-        publisher.publishEvent(new RequestRecoveryObserver(user, encodedToken, expiresAt));
+        publisher.publishEvent(new RecoveryRequestObserver(user, encodedToken, expiresAt));
 
         return ResponseEntity.ok(new RecoveryResponseDTO("A password recovery email has been sent to " + data.email() + " if it is registered in our system. The link will expire in 15 minutes."));
     }
 
-    public ResponseEntity<RecoveryResponseDTO> resetPassword(RequestResetDTO data, String token){
+    public ResponseEntity<RecoveryResponseDTO> resetPassword(ResetRequestDTO data, String token){
         List<User> users = userRepository.findAllByResetTokenIsNotNull();
 
         User user = users.stream()

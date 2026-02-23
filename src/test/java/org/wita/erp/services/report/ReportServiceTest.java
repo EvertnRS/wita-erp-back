@@ -13,7 +13,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.wita.erp.domain.entities.report.ReportRange;
 import org.wita.erp.domain.entities.report.ReportType;
 import org.wita.erp.domain.entities.report.dto.AccountReport;
-import org.wita.erp.domain.entities.report.dto.RequestGenerateReportDTO;
+import org.wita.erp.domain.entities.report.dto.GenerateReportRequestDTO;
 import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.repositories.report.ReportRepository;
@@ -110,7 +110,7 @@ class ReportServiceTest {
                 any()
         );
 
-        byte[] result = reportService.getSheetReport(new RequestGenerateReportDTO(ReportType.ALL, ReportRange.MONTH), "Chrome");
+        byte[] result = reportService.getSheetReport(new GenerateReportRequestDTO(ReportType.ALL, ReportRange.MONTH), "Chrome");
 
         assertNotNull(result);
         assertArrayEquals("fake-bytes".getBytes(), result);
