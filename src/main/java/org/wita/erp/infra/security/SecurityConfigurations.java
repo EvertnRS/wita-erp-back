@@ -35,7 +35,8 @@ public class SecurityConfigurations {
                         .requestMatchers(HttpMethod.POST,
                                 "/auth/login",
                                 "/auth/recovery",
-                                "/auth/reset"
+                                "/auth/reset",
+                                "/auth/verify"
                         ).permitAll()
 
                         .requestMatchers(
