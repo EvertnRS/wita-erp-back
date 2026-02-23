@@ -12,11 +12,14 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class SMTPProvider implements EmailProvider {
     private final JavaMailSender mailSender;
+    private final Map<String, String> templateCache = new ConcurrentHashMap<>();
 
     @Value("${spring.mail.username}")
     private String email;
@@ -77,84 +80,120 @@ public class SMTPProvider implements EmailProvider {
 
     public String buildRecoveryPasswordTemplate(String title, String message, String agentName, String deviceClass,
                                 String userName, String dateTime, String buttonText, String buttonUrl) {
-        String template = loadTemplate("/templates/recoveryPasswordTemplate.html");
-        template = template.replace("{{TITLE}}", title);
-        template = template.replace("{{MESSAGE}}", message);
-        template = template.replace("{{AGENT_NAME}}", agentName);
-        template = template.replace("{{DEVICE_CLASS}}", deviceClass);
-        template = template.replace("{{USER_NAME}}", userName);
-        template = template.replace("{{DATETIME}}", dateTime);
-        template = template.replace("{{BUTTON_TEXT}}", buttonText);
-        template = template.replace("{{BUTTON_URL}}", buttonUrl);
-
-        return template;
+        return processTemplate(
+                "/templates/recoveryPasswordTemplate.html",
+                Map.of(
+                        "TITLE", title,
+                        "MESSAGE", message,
+                        "AGENT_NAME", agentName,
+                        "DEVICE_CLASS", deviceClass,
+                        "USER_NAME", userName,
+                        "DATETIME", dateTime,
+                        "BUTTON_TEXT", buttonText,
+                        "BUTTON_URL", buttonUrl
+                )
+        );
     }
 
     public String buildOverdueTransactionTemplate(String title, String message, String sellerName, String buyerName,
                                                 String value, String dateTime, String buttonText, String buttonUrl) {
-        String template = loadTemplate("/templates/overduePaymentTemplate.html");
-        template = template.replace("{{TITLE}}", title);
-        template = template.replace("{{MESSAGE}}", message);
-        template = template.replace("{{SELLER_NAME}}", sellerName);
-        template = template.replace("{{BUYER_NAME}}", buyerName);
-        template = template.replace("{{VALUE}}", value);
-        template = template.replace("{{DATETIME}}", dateTime);
-        template = template.replace("{{BUTTON_TEXT}}", buttonText);
-        template = template.replace("{{BUTTON_URL}}", buttonUrl);
-
-        return template;
+        return processTemplate(
+                "/templates/overdueTransactionTemplate.html",
+                Map.of(
+                        "TITLE", title,
+                        "MESSAGE", message,
+                        "SELLER_NAME", sellerName,
+                        "BUYER_NAME", buyerName,
+                        "VALUE", value,
+                        "DATETIME", dateTime,
+                        "BUTTON_TEXT", buttonText,
+                        "BUTTON_URL", buttonUrl
+                )
+        );
     }
 
     public String buildProductReplenishmentTemplate(String title, String message, String productName, String quantity,
                                                   String categoryName, String supplierName, String buttonText, String buttonUrl) {
-        String template = loadTemplate("/templates/productReplenishmentTemplate.html");
-        template = template.replace("{{TITLE}}", title);
-        template = template.replace("{{MESSAGE}}", message);
-        template = template.replace("{{PRODUCT_NAME}}", productName);
-        template = template.replace("{{QUANTITY}}", quantity);
-        template = template.replace("{{CATEGORY_NAME}}", categoryName);
-        template = template.replace("{{SUPPLIER_NAME}}", supplierName);
-        template = template.replace("{{BUTTON_TEXT}}", buttonText);
-        template = template.replace("{{BUTTON_URL}}", buttonUrl);
-
-        return template;
+        return processTemplate(
+                "/templates/productReplenishmentTemplate.html",
+                Map.of(
+                        "TITLE", title,
+                        "MESSAGE", message,
+                        "PRODUCT_NAME", productName,
+                        "QUANTITY", quantity,
+                        "CATEGORY_NAME", categoryName,
+                        "SUPPLIER_NAME", supplierName,
+                        "BUTTON_TEXT", buttonText,
+                        "BUTTON_URL", buttonUrl
+                )
+        );
     }
 
     public String buildEnable2FATemplate(String title, String message, String agentName, String deviceClass,
                            String userName, String dateTime){
-        String template = loadTemplate("/templates/enable2FATemplate.html");
-
-        template = template.replace("{{TITLE}}", title);
-        template = template.replace("{{MESSAGE}}", message);
-        template = template.replace("{{AGENT_NAME}}", agentName);
-        template = template.replace("{{DEVICE_CLASS}}", deviceClass);
-        template = template.replace("{{USER_NAME}}", userName);
-        template = template.replace("{{DATETIME}}", dateTime);
-
-        return template;
+        return processTemplate(
+                "/templates/enable2FATemplate.html",
+                Map.of(
+                        "TITLE", title,
+                        "MESSAGE", message,
+                        "AGENT_NAME", agentName,
+                        "DEVICE_CLASS", deviceClass,
+                        "USER_NAME", userName,
+                        "DATETIME", dateTime
+                )
+        );
     }
 
     public String buildReportExport(String title, String message, String agentName, String deviceClass,
                                          String userName, String dateTime){
-        String template = loadTemplate("/templates/reportExport.html");
+        return processTemplate(
+                "/templates/reportExport.html",
+                Map.of(
+                        "TITLE", title,
+                        "MESSAGE", message,
+                        "AGENT_NAME", agentName,
+                        "DEVICE_CLASS", deviceClass,
+                        "USER_NAME", userName,
+                        "DATETIME", dateTime
+                )
+        );
+    }
 
-        template = template.replace("{{TITLE}}", title);
-        template = template.replace("{{MESSAGE}}", message);
-        template = template.replace("{{AGENT_NAME}}", agentName);
-        template = template.replace("{{DEVICE_CLASS}}", deviceClass);
-        template = template.replace("{{USER_NAME}}", userName);
-        template = template.replace("{{DATETIME}}", dateTime);
-
-        return template;
+    public String buildVerifyEmailTemplate(String title, String message, String agentName, String date, String buttonText, String buttonUrl) {
+        return processTemplate(
+                "/templates/verifyEmailTemplate.html",
+                Map.of(
+                        "TITLE", title,
+                        "MESSAGE", message,
+                        "AGENT_NAME", agentName,
+                        "DATE", date,
+                        "BUTTON_TEXT", buttonText,
+                        "BUTTON_URL", buttonUrl
+                )
+        );
     }
 
     private String loadTemplate(String path) {
-        try (InputStream is = getClass().getResourceAsStream(path)) {
-            assert is != null;
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException("Load template error", e);
+        return templateCache.computeIfAbsent(path, p -> {
+            try (InputStream is = getClass().getResourceAsStream(p)) {
+                if (is == null) {
+                    throw new IllegalArgumentException("Template not found: " + p);
+                }
+                return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new RuntimeException("Load template error", e);
+            }
+        });
+    }
+
+    private String processTemplate(String path, Map<String, String> variables) {
+        String template = loadTemplate(path);
+
+        for (Map.Entry<String, String> entry : variables.entrySet()) {
+            template = template.replace("{{" + entry.getKey() + "}}", entry.getValue());
         }
+
+        return template;
     }
 
 }

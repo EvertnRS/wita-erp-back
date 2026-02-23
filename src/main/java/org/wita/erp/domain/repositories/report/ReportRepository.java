@@ -12,29 +12,37 @@ import java.util.UUID;
 
 public interface ReportRepository extends JpaRepository<Transaction, UUID> {
     @Query("""
-    SELECT new org.wita.erp.domain.entities.report.dto.AccountReport(
-        r.id,
-        r.value,
-        r.dueDate,
-        r.paymentStatus,
-        'RECEIVABLE'
-    )
-    FROM Receivable r
-    WHERE r.dueDate <= :dueDateLimit
+SELECT new org.wita.erp.domain.entities.report.dto.AccountReport(
+    r.id,
+    r.value,
+    r.dueDate,
+    r.paymentStatus,
+    'RECEIVABLE'
+)
+FROM Receivable r
+WHERE r.dueDate BETWEEN :startDate AND :endDate
+AND r.active = true
 """)
-    List<AccountReport> findAllReceivable(@Param("dueDateLimit") LocalDate dueDateLimit);
+    List<AccountReport> findAllReceivable(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 
     @Query("""
-    SELECT new org.wita.erp.domain.entities.report.dto.AccountReport(
-        p.id,
-        p.value,
-        p.dueDate,
-        p.paymentStatus,
-        'PAYABLE'
-    )
-    FROM Payable p
-    WHERE p.dueDate <= :dueDateLimit
+SELECT new org.wita.erp.domain.entities.report.dto.AccountReport(
+    p.id,
+    p.value,
+    p.dueDate,
+    p.paymentStatus,
+    'PAYABLE'
+)
+FROM Payable p
+WHERE p.dueDate BETWEEN :startDate AND :endDate
+AND p.active = true
 """)
-    List<AccountReport> findAllPayable(@Param("dueDateLimit") LocalDate dueDateLimit);
+    List<AccountReport> findAllPayable(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
 
 }

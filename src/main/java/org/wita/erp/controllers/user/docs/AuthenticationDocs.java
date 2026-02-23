@@ -9,7 +9,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.mail.MessagingException;
 import org.springframework.http.ResponseEntity;
-import org.wita.erp.domain.entities.user.dtos.*;
+import org.wita.erp.domain.entities.user.authentication.dtos.*;
+import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
+import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
+import org.wita.erp.domain.entities.user.dtos.UserDTO;
 
 @Tag(name = "auth", description = "Endpoints to register, login and reset user's password on ERP system")
 public interface AuthenticationDocs {
@@ -27,7 +30,7 @@ public interface AuthenticationDocs {
             @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
     })
-    ResponseEntity<RecoveryResponseDTO> requestRecovery(RequestRecoveryDTO data, @Parameter(hidden = true) String userAgent) throws MessagingException;
+    ResponseEntity<RecoveryResponseDTO> requestRecovery(RecoveryRequestDTO data, @Parameter(hidden = true) String userAgent) throws MessagingException;
 
     @Operation(summary = "Reset user's password", description = "Reset user's password using a valid recovery token.")
     @ApiResponses(value = {
@@ -35,8 +38,8 @@ public interface AuthenticationDocs {
             @ApiResponse(responseCode = "400", description = "Invalid request data or token", content = @Content),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
     })
-    ResponseEntity<RecoveryResponseDTO> resetPassword(RequestResetDTO data,
-                                              @Schema(description = "Recovery token received by email", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+    ResponseEntity<RecoveryResponseDTO> resetPassword(ResetRequestDTO data,
+                                                      @Schema(description = "Recovery token received by email", example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
                                               String token);
 
     @Operation(summary = "Register a new user on the system.", description = "Create a new user with name, email and password. \nRequires USER_CREATE authority.")
@@ -45,7 +48,7 @@ public interface AuthenticationDocs {
             @ApiResponse(responseCode = "400", description = "Invalid request data", content = @Content),
             @ApiResponse(responseCode = "403", description = "Access denied - user does not have USER_CREATE authority", content = @Content)
     })
-    ResponseEntity<UserDTO> register(RegisterDTO data);
+    ResponseEntity<VerifyEmailResponseDTO> register(RegisterDTO data) throws MessagingException;
 
     @Operation(summary = "Enable two-factor authentication for the user.", description = "Generate a QR code and secret key to enable two-factor authentication. \nRequires user to be authenticated.")
     @ApiResponses(value = {

@@ -36,13 +36,13 @@ public class Payable {
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus;
 
-    @Min(1)
-    @Column(updatable = false)
-    private Integer installment;
-
     @ManyToOne
     @JoinColumn(name = "purchase_id")
     private Purchase purchase;
+
+    @Min(1)
+    @Column(updatable = false)
+    private Integer installment;
 
     @FutureOrPresent
     @Column(name = "paid_at")

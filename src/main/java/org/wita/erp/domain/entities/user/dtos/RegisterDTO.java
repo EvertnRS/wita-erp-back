@@ -11,8 +11,6 @@ public record RegisterDTO(
         @NotBlank @Email String email,
         @Schema(description = "User's name", example = "John Doe")
         @NotBlank String name,
-        @Schema(description = "User's password", example = "StrongP@ssw0rd!")
-        @NotBlank String password,
         @Schema(description = "ID of the role assigned to the user", example = "2")
         @NotNull @Positive Long role
 ) {

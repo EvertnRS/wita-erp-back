@@ -1,10 +1,12 @@
 package org.wita.erp.services.user;
 
+import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
@@ -16,8 +18,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.wita.erp.domain.entities.user.User;
+import org.wita.erp.domain.entities.user.authentication.dtos.VerifyEmailResponseDTO;
 import org.wita.erp.domain.entities.user.dtos.DeleteUserRequestDTO;
 import org.wita.erp.domain.entities.user.dtos.RegisterDTO;
 import org.wita.erp.domain.entities.user.dtos.UpdateUserRequestDTO;
@@ -27,7 +33,8 @@ import org.wita.erp.domain.entities.user.role.Role;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.domain.repositories.user.role.RoleRepository;
 import org.wita.erp.infra.exceptions.user.UserException;
-import org.wita.erp.services.user.authentication.observers.RequestRecoveryObserver;
+import org.wita.erp.infra.providers.email.EmailProvider;
+import org.wita.erp.services.user.authentication.observers.RecoveryRequestObserver;
 import org.wita.erp.services.user.authentication.observers.ResetPasswordObserver;
 import org.wita.erp.services.user.role.observers.RoleSoftDeleteObserver;
 
@@ -35,6 +42,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -48,8 +60,9 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
+    private EmailProvider emailProvider;
+    @Mock
     private ApplicationEventPublisher publisher;
-
     @InjectMocks
     private UserService userService;
 
@@ -70,22 +83,36 @@ class UserServiceTest {
         baseUserDTO = new UserDTO(userId, "John", "john@example.com", fakeRole, true);
     }
 
+    private void mockAuthenticatedUser() {
+        User loggedUser = new User();
+        loggedUser.setId(UUID.randomUUID());
+        loggedUser.setName("Admin");
+
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getPrincipal()).thenReturn(loggedUser);
+
+        SecurityContext context = mock(SecurityContext.class);
+        when(context.getAuthentication()).thenReturn(authentication);
+
+        SecurityContextHolder.setContext(context);
+    }
+
     @Test
     @DisplayName("Deve retornar todos os usuários quando o searchTerm for nulo")
     void shouldReturnAllUsersWhenSearchTermIsNull() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<User> fakePage = new PageImpl<>(List.of(fakeUser));
 
-        Mockito.when(userRepository.findAll(pageable)).thenReturn(fakePage);
-        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
+        when(userRepository.findAll(pageable)).thenReturn(fakePage);
+        when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
 
         ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, null);
 
-        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(userRepository).findAll(pageable);
-        Mockito.verify(userRepository, Mockito.never()).findBySearchTerm(Mockito.any(), Mockito.any());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getTotalElements());
+        verify(userRepository).findAll(pageable);
+        verify(userRepository, Mockito.never()).findBySearchTerm(any(), any());
     }
 
     @Test
@@ -94,61 +121,112 @@ class UserServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Page<User> fakePage = new PageImpl<>(List.of(fakeUser));
 
-        Mockito.when(userRepository.findBySearchTerm("john", pageable)).thenReturn(fakePage);
-        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
+        when(userRepository.findBySearchTerm("john", pageable)).thenReturn(fakePage);
+        when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
 
         ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, "john");
 
-        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(userRepository).findBySearchTerm("john", pageable);
-        Mockito.verify(userRepository, Mockito.never()).findAll(Mockito.any(Pageable.class));
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getTotalElements());
+        verify(userRepository).findBySearchTerm("john", pageable);
+        verify(userRepository, Mockito.never()).findAll(any(Pageable.class));
     }
 
     @Test
-    @DisplayName("Deve cadastrar um novo usuário com sucesso")
-    void shouldRegisterNewUserSuccessfully() {
-        RegisterDTO fakeRegisterDTO = new RegisterDTO("john@example.com", "John", "password", 2L);
-        UserDTO expectedUserDTO = new UserDTO(null, "John", "john@example.com", fakeRole, true);
+    void shouldRegisterUserAndSendVerificationEmail() throws Exception {
+        mockAuthenticatedUser();
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
 
-        Mockito.when(userRepository.findByEmail(Mockito.anyString())).thenReturn(Optional.empty());
-        Mockito.when(roleRepository.findById(Mockito.anyLong())).thenReturn(Optional.of(fakeRole));
-        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("password");
-        Mockito.when(userMapper.toUserDTO(Mockito.any())).thenReturn(expectedUserDTO);
+        RegisterDTO dto = new RegisterDTO("john@example.com", "John", roleId);
 
-        ResponseEntity<UserDTO> response = userService.save(fakeRegisterDTO);
+        when(userRepository.findByEmail(dto.email()))
+                .thenReturn(Optional.empty());
 
-        Assertions.assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        Assertions.assertEquals(expectedUserDTO, response.getBody());
-        Mockito.verify(userRepository).save(Mockito.any(User.class));
+        when(roleRepository.findById(roleId))
+                .thenReturn(Optional.of(role));
+
+        when(emailProvider.buildVerifyEmailTemplate(
+                any(), any(), any(), any(), any(), any()))
+                .thenReturn("<html>email</html>");
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+
+        ResponseEntity<VerifyEmailResponseDTO> response =
+                userService.save(dto);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+
+        verify(userRepository).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+
+        assertEquals(dto.name(), savedUser.getName());
+        assertEquals(dto.email(), savedUser.getEmail());
+        assertEquals(role, savedUser.getRole());
+        assertNotNull(savedUser.getVerifyEmailToken());
+        assertNotNull(savedUser.getVerifyEmailTokenExpiresAt());
+
+        verify(emailProvider).sendEmail(
+                eq(dto.email()),
+                eq("Verificação de Email"),
+                eq("<html>email</html>")
+        );
     }
 
     @Test
-    @DisplayName("Deve lançar UserException ao tentar cadastrar um usuário com email já registrado")
-    void shouldThrowUserExceptionWhenEmailAlreadyRegistered() {
-        RegisterDTO fakeRegisterDTO = new RegisterDTO("john@example.com", "John", "password", 2L);
-        User existingUser = new User("John", "pass", "john@example.com", null);
+    @DisplayName("Deve lançar UserException ao tentar cadastrar usuário com email já existente")
+    void shouldThrowUserExceptionWhenEmailAlreadyRegistered() throws MessagingException {
+        RegisterDTO dto = new RegisterDTO("john@example.com", "John", 2L);
+        User existingUser = new User();
+        existingUser.setEmail("john@example.com");
 
-        Mockito.when(userRepository.findByEmail(Mockito.anyString())).thenReturn(Optional.of(existingUser));
-        UserException exception = Assertions.assertThrows(UserException.class, () -> userService.save(fakeRegisterDTO));
+        when(userRepository.findByEmail("john@example.com"))
+                .thenReturn(Optional.of(existingUser));
 
-        Assertions.assertEquals(HttpStatus.CONFLICT, exception.getHttpStatus());
-        Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+        UserException exception = assertThrows(
+                UserException.class,
+                () -> userService.save(dto)
+        );
+
+        assertAll(
+                () -> assertEquals(HttpStatus.CONFLICT, exception.getHttpStatus()),
+                () -> assertEquals("Email already registered", exception.getMessage())
+        );
+
+        verify(userRepository).findByEmail("john@example.com");
+        verify(userRepository, never()).save(any());
+        verify(roleRepository, never()).findById(any());
+        verify(emailProvider, never()).sendEmail(any(), any(), any());
     }
 
     @Test
-    @DisplayName("Deve lançar UserException ao tentar cadastrar um usuário com role inexistente")
-    void shouldThrowUserExceptionWhenRoleNotFound() {
-        RegisterDTO fakeRegisterDTO = new RegisterDTO("john@example.com", "John", "password", 2L);
+    @DisplayName("Deve lançar UserException quando role não existir")
+    void shouldThrowUserExceptionWhenRoleNotFound() throws MessagingException {
+        mockAuthenticatedUser();
+        RegisterDTO dto = new RegisterDTO("john@example.com", "John", 2L);
 
-        Mockito.when(userRepository.findByEmail(Mockito.anyString())).thenReturn(Optional.empty());
-        Mockito.when(roleRepository.findById(Mockito.anyLong())).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("john@example.com"))
+                .thenReturn(Optional.empty());
 
-        UserException exception = Assertions.assertThrows(UserException.class, () -> userService.save(fakeRegisterDTO));
+        when(roleRepository.findById(2L))
+                .thenReturn(Optional.empty());
 
-        Assertions.assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
-        Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+        UserException exception = assertThrows(
+                UserException.class,
+                () -> userService.save(dto)
+        );
+
+        assertAll(
+                () -> assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus()),
+                () -> assertEquals("Role not registered in the system", exception.getMessage())
+        );
+
+        verify(userRepository).findByEmail("john@example.com");
+        verify(roleRepository).findById(2L);
+        verify(userRepository, never()).save(any());
+        verify(emailProvider, never()).sendEmail(any(), any(), any());
     }
 
     @Test
@@ -157,15 +235,15 @@ class UserServiceTest {
         UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null, null);
         UserDTO expectedUserDTO = new UserDTO(userId, "John Updated", "john.updated@example.com", fakeRole, true);
 
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        Mockito.when(userRepository.findByEmail(fakeUpdateDTO.email())).thenReturn(Optional.empty());
-        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(expectedUserDTO);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+        when(userRepository.findByEmail(fakeUpdateDTO.email())).thenReturn(Optional.empty());
+        when(userMapper.toUserDTO(fakeUser)).thenReturn(expectedUserDTO);
 
         ResponseEntity<UserDTO> response = userService.update(userId, fakeUpdateDTO);
 
-        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertEquals(expectedUserDTO, response.getBody());
-        Mockito.verify(userRepository).save(fakeUser);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expectedUserDTO, response.getBody());
+        verify(userRepository).save(fakeUser);
     }
 
     @Test
@@ -174,17 +252,17 @@ class UserServiceTest {
         UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", "newPassword", null);
         UserDTO expectedUserDTO = new UserDTO(userId, "John Updated", "john.updated@example.com", fakeRole, true);
 
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        Mockito.when(userRepository.findByEmail(fakeUpdateDTO.email())).thenReturn(Optional.empty());
-        Mockito.when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
-        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(expectedUserDTO);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+        when(userRepository.findByEmail(fakeUpdateDTO.email())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
+        when(userMapper.toUserDTO(fakeUser)).thenReturn(expectedUserDTO);
 
         ResponseEntity<UserDTO> response = userService.update(userId, fakeUpdateDTO);
 
-        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertEquals(expectedUserDTO, response.getBody());
-        Mockito.verify(passwordEncoder).encode("newPassword");
-        Mockito.verify(userRepository).save(fakeUser);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expectedUserDTO, response.getBody());
+        verify(passwordEncoder).encode("newPassword");
+        verify(userRepository).save(fakeUser);
     }
 
     @Test
@@ -194,17 +272,17 @@ class UserServiceTest {
         Role newRole = new Role(3L, "ADMIN", true, null);
         UserDTO expectedUserDTO = new UserDTO(userId, "John Updated", "john.updated@example.com", newRole, true);
 
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        Mockito.when(userRepository.findByEmail(fakeUpdateDTO.email())).thenReturn(Optional.empty());
-        Mockito.when(roleRepository.findById(3L)).thenReturn(Optional.of(newRole));
-        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(expectedUserDTO);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+        when(userRepository.findByEmail(fakeUpdateDTO.email())).thenReturn(Optional.empty());
+        when(roleRepository.findById(3L)).thenReturn(Optional.of(newRole));
+        when(userMapper.toUserDTO(fakeUser)).thenReturn(expectedUserDTO);
 
         ResponseEntity<UserDTO> response = userService.update(userId, fakeUpdateDTO);
 
-        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertEquals(expectedUserDTO, response.getBody());
-        Mockito.verify(roleRepository).findById(3L);
-        Mockito.verify(userRepository).save(fakeUser);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(expectedUserDTO, response.getBody());
+        verify(roleRepository).findById(3L);
+        verify(userRepository).save(fakeUser);
     }
 
     @Test
@@ -212,12 +290,12 @@ class UserServiceTest {
     void shouldThrowUserExceptionWhenUpdatingNonExistentUser() {
         UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null, null);
 
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         UserException exception = Assertions.assertThrows(UserException.class, () -> userService.update(userId, fakeUpdateDTO));
 
-        Assertions.assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
-        Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
+        verify(userRepository, Mockito.never()).save(any(User.class));
     }
 
     @Test
@@ -228,13 +306,13 @@ class UserServiceTest {
         User existingUser = new User("Another", "pass", "existing@example.com", fakeRole);
         existingUser.setId(UUID.randomUUID());
 
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        Mockito.when(userRepository.findByEmail("existing@example.com")).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+        when(userRepository.findByEmail("existing@example.com")).thenReturn(Optional.of(existingUser));
 
         UserException exception = Assertions.assertThrows(UserException.class, () -> userService.update(userId, fakeUpdateDTO));
 
-        Assertions.assertEquals(HttpStatus.CONFLICT, exception.getHttpStatus());
-        Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+        assertEquals(HttpStatus.CONFLICT, exception.getHttpStatus());
+        verify(userRepository, Mockito.never()).save(any(User.class));
     }
 
     @Test
@@ -242,14 +320,14 @@ class UserServiceTest {
     void shouldThrowUserExceptionWhenUpdatingWithNonExistentRole() {
         UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null, 999L);
 
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        Mockito.when(userRepository.findByEmail("john.updated@example.com")).thenReturn(Optional.empty());
-        Mockito.when(roleRepository.findById(999L)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+        when(userRepository.findByEmail("john.updated@example.com")).thenReturn(Optional.empty());
+        when(roleRepository.findById(999L)).thenReturn(Optional.empty());
 
         UserException exception = Assertions.assertThrows(UserException.class, () -> userService.update(userId, fakeUpdateDTO));
 
-        Assertions.assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
-        Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
+        verify(userRepository, Mockito.never()).save(any(User.class));
     }
 
     @Test
@@ -257,27 +335,27 @@ class UserServiceTest {
     void shouldDeleteUserSuccessfully() {
         UserDTO deletedUserDTO = new UserDTO(userId, "John", "john@example.com", fakeRole, false);
 
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(deletedUserDTO);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+        when(userMapper.toUserDTO(fakeUser)).thenReturn(deletedUserDTO);
 
         ResponseEntity<UserDTO> response = userService.delete(userId, new DeleteUserRequestDTO("Reason"));
 
-        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertEquals(deletedUserDTO, response.getBody());
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(deletedUserDTO, response.getBody());
         Assertions.assertFalse(fakeUser.getActive());
-        Mockito.verify(userRepository).save(fakeUser);
-        Mockito.verify(publisher, Mockito.times(2)).publishEvent(Mockito.any(Object.class));
+        verify(userRepository).save(fakeUser);
+        verify(publisher, Mockito.times(2)).publishEvent(any(Object.class));
     }
 
     @Test
     @DisplayName("Deve lançar UserException ao tentar deletar usuário inexistente")
     void shouldThrowUserExceptionWhenDeletingNonExistentUser() {
-        Mockito.when(userRepository.findById(userId)).thenReturn(Optional.empty());
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
         UserException exception = Assertions.assertThrows(UserException.class, () -> userService.delete(userId, new DeleteUserRequestDTO("Reason")));
 
-        Assertions.assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
-        Mockito.verify(userRepository, Mockito.never()).save(Mockito.any(User.class));
+        assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
+        verify(userRepository, Mockito.never()).save(any(User.class));
     }
 
     @Test
@@ -288,13 +366,13 @@ class UserServiceTest {
 
         List<UUID> affectedUsers = List.of(UUID.randomUUID(), UUID.randomUUID());
 
-        Mockito.when(userRepository.cascadeDeleteFromRole(roleIdToBeDeleted)).thenReturn(affectedUsers);
+        when(userRepository.cascadeDeleteFromRole(roleIdToBeDeleted)).thenReturn(affectedUsers);
 
         userService.onRoleSoftDelete(event);
 
-        Mockito.verify(userRepository).cascadeDeleteFromRole(roleIdToBeDeleted);
+        verify(userRepository).cascadeDeleteFromRole(roleIdToBeDeleted);
 
-        Mockito.verify(publisher, Mockito.times(4)).publishEvent(Mockito.any(Object.class));
+        verify(publisher, Mockito.times(4)).publishEvent(any(Object.class));
     }
 
     @Test
@@ -303,12 +381,12 @@ class UserServiceTest {
         Long roleIdToBeDeleted = 99L;
         RoleSoftDeleteObserver event = new RoleSoftDeleteObserver(roleIdToBeDeleted);
 
-        Mockito.when(userRepository.cascadeDeleteFromRole(roleIdToBeDeleted)).thenReturn(List.of());
+        when(userRepository.cascadeDeleteFromRole(roleIdToBeDeleted)).thenReturn(List.of());
 
         userService.onRoleSoftDelete(event);
 
-        Mockito.verify(userRepository).cascadeDeleteFromRole(roleIdToBeDeleted);
-        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
+        verify(userRepository).cascadeDeleteFromRole(roleIdToBeDeleted);
+        verify(publisher, Mockito.never()).publishEvent(any());
     }
 
     @Test
@@ -316,13 +394,13 @@ class UserServiceTest {
     void shouldProcessRequestRecoveryEventSuccessfully() {
         String encodedToken = "encodedToken123";
         LocalDateTime expiresAt = LocalDateTime.now().plusHours(1);
-        RequestRecoveryObserver event = new RequestRecoveryObserver(fakeUser, encodedToken, expiresAt);
+        RecoveryRequestObserver event = new RecoveryRequestObserver(fakeUser, encodedToken, expiresAt);
 
         userService.onRequestRecovery(event);
 
-        Assertions.assertEquals(encodedToken, fakeUser.getResetToken());
-        Assertions.assertEquals(expiresAt, fakeUser.getResetTokenExpiresAt());
-        Mockito.verify(userRepository).save(fakeUser);
+        assertEquals(encodedToken, fakeUser.getResetToken());
+        assertEquals(expiresAt, fakeUser.getResetTokenExpiresAt());
+        verify(userRepository).save(fakeUser);
     }
 
     @Test
@@ -335,14 +413,14 @@ class UserServiceTest {
         String encodedNewPassword = "encodedNewPassword123";
         ResetPasswordObserver event = new ResetPasswordObserver(fakeUser, newPassword);
 
-        Mockito.when(passwordEncoder.encode(newPassword)).thenReturn(encodedNewPassword);
+        when(passwordEncoder.encode(newPassword)).thenReturn(encodedNewPassword);
 
         userService.onResetPassword(event);
 
-        Assertions.assertEquals(encodedNewPassword, fakeUser.getPassword());
+        assertEquals(encodedNewPassword, fakeUser.getPassword());
         Assertions.assertNull(fakeUser.getResetToken());
         Assertions.assertNull(fakeUser.getResetTokenExpiresAt());
-        Mockito.verify(passwordEncoder).encode(newPassword);
-        Mockito.verify(userRepository).save(fakeUser);
+        verify(passwordEncoder).encode(newPassword);
+        verify(userRepository).save(fakeUser);
     }
 }
