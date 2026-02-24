@@ -1,7 +1,7 @@
 package org.wita.erp.domain.entities.transaction.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.wita.erp.domain.entities.payment.company.dtos.CompanyPaymentTypeDTO;
+import org.wita.erp.domain.entities.paymentType.company.dtos.CompanyPaymentTypeDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.PurchaseItemDTO;
 import org.wita.erp.domain.entities.user.dtos.BuyerDTO;
 

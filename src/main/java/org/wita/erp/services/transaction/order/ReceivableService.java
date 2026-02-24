@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.audit.EntityType;
+import org.wita.erp.domain.entities.payment.Payment;
 import org.wita.erp.domain.entities.transaction.PaymentStatus;
 import org.wita.erp.domain.entities.transaction.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.Order;
@@ -22,6 +23,7 @@ import org.wita.erp.domain.entities.transaction.order.dtos.CreateReceivableReque
 import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.mappers.ReceivableMapper;
+import org.wita.erp.domain.repositories.payment.PaymentRepository;
 import org.wita.erp.domain.repositories.transaction.order.OrderRepository;
 import org.wita.erp.domain.repositories.transaction.order.ReceivableRepository;
 import org.wita.erp.infra.exceptions.order.OrderException;
@@ -29,10 +31,8 @@ import org.wita.erp.infra.exceptions.receivable.ReceivableException;
 import org.wita.erp.infra.schedules.handler.ScheduledTaskTypes;
 import org.wita.erp.infra.schedules.scheduler.SchedulerService;
 import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
-import org.wita.erp.services.transaction.order.observers.CreateReceivableOrderObserver;
-import org.wita.erp.services.transaction.order.observers.OrderSoftDeleteObserver;
-import org.wita.erp.services.transaction.order.observers.OrderStatusChangedObserver;
-import org.wita.erp.services.transaction.order.observers.ReceivableCompensationObserver;
+import org.wita.erp.services.payment.observers.PaymentConfirmObserver;
+import org.wita.erp.services.transaction.order.observers.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -49,6 +49,7 @@ public class ReceivableService {
     private final OrderRepository orderRepository;
     private final ReceivableMapper receivableMapper;
     private final SchedulerService schedulerService;
+    private final PaymentRepository paymentRepository;
     private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
@@ -236,7 +237,7 @@ public class ReceivableService {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void onReceivableOrderUpdated(CreateReceivableOrderObserver event) {
+    public void onReceivableOrderUpdated(UpdateReceivableOrderObserver event) {
         Order order = orderRepository.findById(event.order())
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
 
@@ -346,5 +347,17 @@ public class ReceivableService {
     public void cancelScheduleTasks(UUID id){
         schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_DUE_SOON, id.toString());
         schedulerService.cancel(ScheduledTaskTypes.RECEIVABLE_OVERDUE, id.toString());
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onConfirmPayment(PaymentConfirmObserver event){
+        Payment payment = paymentRepository.findById(event.payment())
+                .orElseThrow(() -> new RuntimeException("Payment not found for id: " + event.payment()));
+
+        payment.getReceivable().setPaymentStatus(PaymentStatus.PAID);
+        payment.getReceivable().setPaidAt(LocalDateTime.now());
+        receivableRepository.save(payment.getReceivable());
     }
 }

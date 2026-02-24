@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.wita.erp.domain.entities.payment.company.CompanyPaymentType;
+import org.wita.erp.domain.entities.paymentType.company.CompanyPaymentType;
 import org.wita.erp.domain.entities.supplier.Supplier;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.user.User;

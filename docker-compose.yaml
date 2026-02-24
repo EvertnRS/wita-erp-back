@@ -17,5 +17,16 @@ services:
       - "6379:6379"
     command: redis-server --appendonly yes
 
+
+  ## docker-compose up stripe-cli para conseguir a secret do webhook
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    container_name: stripe-cli-local
+    command: listen --forward-to http://host.docker.internal:8080/payments/webhook
+    environment:
+      - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   pgdata:
