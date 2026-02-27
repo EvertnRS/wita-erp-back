@@ -60,8 +60,8 @@ class CustomerServiceTest {
         customerId = UUID.randomUUID();
         pageable = PageRequest.of(0, 10);
 
-        fakeCustomer = new Customer(customerId, "John Doe", "john@example.com", "Address", "12345678900", LocalDate.of(1990, 1, 1), true, null);
-        existingCustomer = new Customer(UUID.randomUUID(), "Existing User", "existing@example.com", "Other Address", "99999999999", LocalDate.of(1985, 5, 5), true, null);
+        fakeCustomer = new Customer(customerId, "John Doe", "john@example.com", "Address", "12345678900", LocalDate.of(1990, 1, 1), true, null, null);
+        existingCustomer = new Customer(UUID.randomUUID(), "Existing User", "existing@example.com", "Other Address", "99999999999", LocalDate.of(1985, 5, 5), true, null, null);
 
         fakeCustomerDTO = new CustomerDTO(customerId, "John Doe", "john@example.com", "Address", "12345678900", LocalDate.of(1990, 1, 1), true);
 

@@ -1,7 +1,7 @@
 package org.wita.erp.domain.entities.transaction.purchase.mappers;
 
 import org.mapstruct.*;
-import org.wita.erp.domain.entities.payment.company.mappers.CompanyPaymentTypeMapper;
+import org.wita.erp.domain.entities.paymentType.company.mappers.CompanyPaymentTypeMapper;
 import org.wita.erp.domain.entities.product.mappers.ProductMapper;
 import org.wita.erp.domain.entities.supplier.mappers.SupplierMapper;
 import org.wita.erp.domain.entities.transaction.dtos.PurchaseDTO;

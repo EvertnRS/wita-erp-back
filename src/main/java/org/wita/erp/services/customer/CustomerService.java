@@ -19,6 +19,7 @@ import org.wita.erp.domain.entities.customer.mappers.CustomerMapper;
 import org.wita.erp.domain.repositories.customer.CustomerRepository;
 import org.wita.erp.infra.exceptions.customer.CustomerException;
 import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
+import org.wita.erp.services.customer.observers.CustomerCreateObserver;
 import org.wita.erp.services.customer.observers.CustomerSoftDeleteObserver;
 
 import java.util.UUID;
@@ -43,6 +44,7 @@ public class CustomerService {
         return ResponseEntity.ok(customerPage.map(customerMapper::toDTO));
     }
 
+    @Transactional
     public ResponseEntity<CustomerDTO> save(CreateCustomerRequestDTO data) {
         if (customerRepository.findByEmail(data.email()) != null || customerRepository.findByCpf(data.cpf()) != null) {
             throw new CustomerException("Customer already exists", HttpStatus.CONFLICT);
@@ -56,6 +58,8 @@ public class CustomerService {
         customer.setBirthDate(data.birthDate());
 
         customerRepository.save(customer);
+
+        publisher.publishEvent(new CustomerCreateObserver(customer.getId()));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(customerMapper.toDTO(customer));
     }
