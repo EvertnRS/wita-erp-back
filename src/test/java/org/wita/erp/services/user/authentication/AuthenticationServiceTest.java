@@ -18,11 +18,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.wita.erp.domain.entities.user.User;
 import org.wita.erp.domain.entities.user.authentication.UserAuthentication;
-import org.wita.erp.domain.entities.user.dtos.*;
+import org.wita.erp.domain.entities.user.authentication.dtos.*;
+import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
+import org.wita.erp.domain.entities.user.dtos.UserDTO;
 import org.wita.erp.domain.entities.user.mappers.UserMapper;
 import org.wita.erp.domain.entities.user.role.Role;
 import org.wita.erp.domain.repositories.user.UserRepository;
@@ -33,7 +34,8 @@ import org.wita.erp.infra.providers.auth.AuthProvider;
 import org.wita.erp.infra.providers.email.EmailProvider;
 import org.wita.erp.infra.providers.twofactor.TwoFactorAuthenticationProvider;
 import org.wita.erp.infra.providers.twofactor.TwoFactorAuthenticationToken;
-import org.wita.erp.services.user.authentication.observers.RequestRecoveryObserver;
+import org.wita.erp.services.user.authentication.observers.RecoveryRequestObserver;
+import org.wita.erp.services.user.authentication.observers.VerifyEmailObserver;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -66,17 +68,18 @@ class AuthenticationServiceTest {
     private User defaultUser;
     private UserDTO defaultUserDTO;
     private AuthenticationDTO defaultAuthRequest;
-    private RequestRecoveryDTO defaultRecoveryRequest;
+    private RecoveryRequestDTO defaultRecoveryRequest;
     private final String defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
 
     @BeforeEach
     void setUp() {
         defaultUser = new User("Admin", "senha123", "admin@example.com", null);
+        defaultUser.setActive(true);
 
         defaultUserDTO = new UserDTO(null, "Admin", "admin@example.com", new Role(1L, "ADMIN", true, new HashSet<>()), null);
 
         defaultAuthRequest = new AuthenticationDTO("admin@example.com", "senha123");
-        defaultRecoveryRequest = new RequestRecoveryDTO("admin@example.com");
+        defaultRecoveryRequest = new RecoveryRequestDTO("admin@example.com");
     }
 
     @Test
@@ -249,10 +252,10 @@ class AuthenticationServiceTest {
         Mockito.verify(passwordEncoder).encode(Mockito.anyString());
         Mockito.verify(emailProvider).sendEmail(defaultRecoveryRequest.email(), "Redefinição de senha", fakeTemplate);
 
-        ArgumentCaptor<RequestRecoveryObserver> eventCaptor = ArgumentCaptor.forClass(RequestRecoveryObserver.class);
+        ArgumentCaptor<RecoveryRequestObserver> eventCaptor = ArgumentCaptor.forClass(RecoveryRequestObserver.class);
         Mockito.verify(publisher).publishEvent(eventCaptor.capture());
 
-        RequestRecoveryObserver capturedEvent = eventCaptor.getValue();
+        RecoveryRequestObserver capturedEvent = eventCaptor.getValue();
         Assertions.assertEquals(defaultUser, capturedEvent.user());
         Assertions.assertEquals(fakeEncodedToken, capturedEvent.encodedToken());
     }
@@ -287,6 +290,85 @@ class AuthenticationServiceTest {
         Assertions.assertThrows(MessagingException.class,
                 () -> authenticationService.requestRecovery(defaultRecoveryRequest, defaultUserAgent));
 
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Deve verificar e-mail com sucesso e publicar evento")
+    void shouldVerifyEmailSuccessfully() {
+        String token = "valid-token";
+        VerifyEmailRequestDTO request = new VerifyEmailRequestDTO("newPassword123");
+
+        defaultUser.setVerifyEmailToken(token);
+        defaultUser.setVerifyEmailTokenExpiresAt(LocalDateTime.now().plusHours(1));
+
+        Mockito.when(userRepository.findByVerifyEmailToken(token))
+                .thenReturn(Optional.of(defaultUser));
+
+        Mockito.when(passwordEncoder.encode("newPassword123"))
+                .thenReturn("ENCODED_PASSWORD");
+
+        ResponseEntity<VerifyEmailResponseDTO> response =
+                authenticationService.verifyEmail(request, token);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertEquals("Email verified successfully", response.getBody().message());
+
+        ArgumentCaptor<VerifyEmailObserver> eventCaptor =
+                ArgumentCaptor.forClass(VerifyEmailObserver.class);
+
+        Mockito.verify(publisher).publishEvent(eventCaptor.capture());
+
+        VerifyEmailObserver capturedEvent = eventCaptor.getValue();
+
+        Assertions.assertEquals(defaultUser, capturedEvent.user());
+        Assertions.assertEquals("ENCODED_PASSWORD", capturedEvent.newPassword());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando token for inválido")
+    void shouldThrowWhenTokenIsInvalid() {
+
+        String token = "invalid-token";
+        VerifyEmailRequestDTO request = new VerifyEmailRequestDTO("123");
+
+        Mockito.when(userRepository.findByVerifyEmailToken(token))
+                .thenReturn(Optional.empty());
+
+        UserException exception = Assertions.assertThrows(
+                UserException.class,
+                () -> authenticationService.verifyEmail(request, token)
+        );
+
+        Assertions.assertEquals(HttpStatus.BAD_REQUEST, exception.getHttpStatus());
+        Assertions.assertEquals("Invalid verification token", exception.getMessage());
+
+        Mockito.verify(passwordEncoder, Mockito.never()).encode(Mockito.any());
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando token estiver expirado")
+    void shouldThrowWhenTokenIsExpired() {
+
+        String token = "expired-token";
+        VerifyEmailRequestDTO request = new VerifyEmailRequestDTO("123");
+
+        defaultUser.setVerifyEmailToken(token);
+        defaultUser.setVerifyEmailTokenExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        Mockito.when(userRepository.findByVerifyEmailToken(token))
+                .thenReturn(Optional.of(defaultUser));
+
+        UserException exception = Assertions.assertThrows(
+                UserException.class,
+                () -> authenticationService.verifyEmail(request, token)
+        );
+
+        Assertions.assertEquals(HttpStatus.BAD_REQUEST, exception.getHttpStatus());
+        Assertions.assertEquals("Verification token has expired", exception.getMessage());
+
+        Mockito.verify(passwordEncoder, Mockito.never()).encode(Mockito.any());
         Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
     }
 }

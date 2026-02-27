@@ -36,6 +36,7 @@ public class SecurityConfigurations {
                                 "/auth/login",
                                 "/auth/recovery",
                                 "/auth/reset",
+                                "/auth/verify"
                                 "/payments/webhook"
                         ).permitAll()
 

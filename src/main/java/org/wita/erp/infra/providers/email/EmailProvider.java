@@ -21,4 +21,6 @@ public interface EmailProvider {
 
     String buildReportExport(String title, String message, String agentName, String deviceClass,
                                     String userName, String dateTime);
+
+    String buildVerifyEmailTemplate(String title, String message, String agentName, String date, String buttonText, String buttonUrl);
 }

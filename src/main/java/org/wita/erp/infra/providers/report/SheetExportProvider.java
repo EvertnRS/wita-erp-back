@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.util.List;
 
 @Service
-public class ExcelExportProvider implements ReportProvider {
+public class SheetExportProvider implements ReportProvider {
 
     public byte[] exportExcel(List<AccountReport> data) {
         try (Workbook workbook = new XSSFWorkbook()) {

@@ -17,8 +17,22 @@ services:
       - "6379:6379"
     command: redis-server --appendonly yes
 
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
 
-  ## docker-compose up stripe-cli para conseguir a secret do webhook
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
   stripe-cli:
     image: stripe/stripe-cli:latest
     container_name: stripe-cli-local
