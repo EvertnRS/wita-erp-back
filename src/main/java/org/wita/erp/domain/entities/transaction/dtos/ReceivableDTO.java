@@ -1,7 +1,7 @@
 package org.wita.erp.domain.entities.transaction.dtos;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.wita.erp.domain.entities.payment.customer.dto.CustomerPaymentTypeDTO;
+import org.wita.erp.domain.entities.paymentType.customer.dto.CustomerPaymentTypeDTO;
 import org.wita.erp.domain.entities.transaction.PaymentStatus;
 
 import java.math.BigDecimal;

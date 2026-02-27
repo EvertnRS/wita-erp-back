@@ -8,9 +8,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.envers.Audited;
+import org.wita.erp.domain.entities.payment.PaymentGatewayCustomer;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -46,4 +49,12 @@ public class Customer {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaymentGatewayCustomer> paymentGatewayCustomers = new ArrayList<>();
+
+    public void addGatewayCustomer(PaymentGatewayCustomer gatewayCustomer) {
+        paymentGatewayCustomers.add(gatewayCustomer);
+        gatewayCustomer.setCustomer(this);
+    }
 }

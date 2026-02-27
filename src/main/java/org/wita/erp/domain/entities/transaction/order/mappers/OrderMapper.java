@@ -2,7 +2,7 @@ package org.wita.erp.domain.entities.transaction.order.mappers;
 
 import org.mapstruct.*;
 import org.wita.erp.domain.entities.customer.mappers.CustomerMapper;
-import org.wita.erp.domain.entities.payment.customer.mappers.CustomerPaymentTypeMapper;
+import org.wita.erp.domain.entities.paymentType.customer.mappers.CustomerPaymentTypeMapper;
 import org.wita.erp.domain.entities.transaction.dtos.OrderDTO;
 import org.wita.erp.domain.entities.transaction.order.Order;
 import org.wita.erp.domain.entities.transaction.order.OrderItem;

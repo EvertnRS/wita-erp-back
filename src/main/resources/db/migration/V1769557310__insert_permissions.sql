@@ -75,6 +75,13 @@ INSERT INTO permission (name, description) VALUES
 ('COMPANY_PAYMENT_UPDATE', 'Atualizar tipo de pagamento'),
 ('COMPANY_PAYMENT_DELETE', 'Remover tipo de pagamento'),
 
+-- Pagamentos
+
+('PAYMENT_READ', 'Visualisar pagamentos'),
+('PAYMENT_CREATE', 'Criar pagamentos'),
+('PAYMENT_UPDATE', 'Atualizar pagamentos'),
+('PAYMENT_DELETE', 'Remover pagamentos'),
+
 -- Contas a pagar
 ('PAYABLE_READ', 'Visualizar contas a pagar'),
 ('PAYABLE_CREATE', 'Criar contas a pagar'),
