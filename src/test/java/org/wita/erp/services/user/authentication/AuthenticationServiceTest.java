@@ -1,0 +1,374 @@
+package org.wita.erp.services.user.authentication;
+
+import jakarta.mail.MessagingException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.wita.erp.domain.entities.user.User;
+import org.wita.erp.domain.entities.user.authentication.UserAuthentication;
+import org.wita.erp.domain.entities.user.authentication.dtos.*;
+import org.wita.erp.domain.entities.user.dtos.LoginResponseDTO;
+import org.wita.erp.domain.entities.user.dtos.UserDTO;
+import org.wita.erp.domain.entities.user.mappers.UserMapper;
+import org.wita.erp.domain.entities.user.role.Role;
+import org.wita.erp.domain.repositories.user.UserRepository;
+import org.wita.erp.domain.repositories.user.authentication.UserAuthenticationRepository;
+import org.wita.erp.infra.exceptions.auth.AuthException;
+import org.wita.erp.infra.exceptions.user.UserException;
+import org.wita.erp.infra.providers.auth.AuthProvider;
+import org.wita.erp.infra.providers.email.EmailProvider;
+import org.wita.erp.infra.providers.twofactor.TwoFactorAuthenticationProvider;
+import org.wita.erp.infra.providers.twofactor.TwoFactorAuthenticationToken;
+import org.wita.erp.services.user.authentication.observers.RecoveryRequestObserver;
+import org.wita.erp.services.user.authentication.observers.VerifyEmailObserver;
+
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Optional;
+
+@ExtendWith(MockitoExtension.class)
+class AuthenticationServiceTest {
+    @Mock
+    private UserAuthenticationRepository userAuthRepository;
+    @Mock
+    private AuthenticationManager authenticationManager;
+    @Mock
+    private AuthProvider authProvider;
+    @Mock
+    private EmailProvider emailProvider;
+    @Mock
+    private TwoFactorAuthenticationProvider twoFactorAuthenticationProvider;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private UserMapper userMapper;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private ApplicationEventPublisher publisher;
+
+    @InjectMocks
+    private AuthenticationService authenticationService;
+
+    private User defaultUser;
+    private UserDTO defaultUserDTO;
+    private AuthenticationDTO defaultAuthRequest;
+    private RecoveryRequestDTO defaultRecoveryRequest;
+    private final String defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
+
+    @BeforeEach
+    void setUp() {
+        defaultUser = new User("Admin", "senha123", "admin@example.com", null);
+        defaultUser.setActive(true);
+
+        defaultUserDTO = new UserDTO(null, "Admin", "admin@example.com", new Role(1L, "ADMIN", true, new HashSet<>()), null);
+
+        defaultAuthRequest = new AuthenticationDTO("admin@example.com", "senha123");
+        defaultRecoveryRequest = new RecoveryRequestDTO("admin@example.com");
+    }
+
+    @Test
+    @DisplayName("Deve realizar login com sucesso e retornar o Token JWT")
+    void shouldLoginSuccessfully() {
+        String fakeJwtToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+        Authentication mockAuthentication = Mockito.mock(Authentication.class);
+
+        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(mockAuthentication);
+        Mockito.when(mockAuthentication.getPrincipal()).thenReturn(defaultUser);
+        Mockito.when(userAuthRepository.findByUserId(defaultUser.getId())).thenReturn(Optional.of(new UserAuthentication()));
+        Mockito.when(authProvider.generateToken(defaultUser)).thenReturn(fakeJwtToken);
+        Mockito.when(userMapper.toUserDTO(defaultUser)).thenReturn(defaultUserDTO);
+
+        ResponseEntity<LoginResponseDTO> response = authenticationService.login(defaultAuthRequest);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertNotNull(response.getBody());
+        Assertions.assertEquals(fakeJwtToken, response.getBody().token());
+        Assertions.assertEquals(defaultUserDTO, response.getBody().user());
+
+        Mockito.verify(authenticationManager).authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class));
+        Mockito.verify(authProvider).generateToken(defaultUser);
+    }
+
+    @Test
+    @DisplayName("Deve exigir 2FA quando usuário tiver fator configurado")
+    void shouldRequireTwoFactorAuthentication() {
+
+        String fake2faToken = "2fa-token";
+
+        Authentication mockAuthentication = Mockito.mock(Authentication.class);
+
+        UserAuthentication userAuthentication = new UserAuthentication();
+        userAuthentication.setSecret("BASE32SECRET");
+
+        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(mockAuthentication);
+        Mockito.when(mockAuthentication.getPrincipal()).thenReturn(defaultUser);
+        Mockito.when(userAuthRepository.findByUserId(defaultUser.getId())).thenReturn(Optional.of(userAuthentication));
+        Mockito.when(authProvider.generateTwoFactorToken(defaultUser)).thenReturn(fake2faToken);
+        Mockito.when(userMapper.toUserDTO(defaultUser)).thenReturn(defaultUserDTO);
+
+        ResponseEntity<LoginResponseDTO> response =
+                authenticationService.login(defaultAuthRequest);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertTrue(response.getBody().twoFactorRequired());
+        Assertions.assertEquals(fake2faToken, response.getBody().token());
+
+        Mockito.verify(authProvider).generateTwoFactorToken(defaultUser);
+        Mockito.verify(authProvider, Mockito.never())
+                .generateToken(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Deve confirmar 2FA com sucesso")
+    void shouldConfirmTwoFactorSuccessfully() {
+        Authentication authentication = Mockito.mock(Authentication.class);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        Mockito.when(authentication.getPrincipal()).thenReturn(defaultUser);
+
+        UserAuthentication userAuth = new UserAuthentication();
+        userAuth.setUser(defaultUser);
+        userAuth.setTemporarySecret("TEMP_SECRET");
+        userAuth.setTemporarySecretExpiration(LocalDateTime.now().plusMinutes(10));
+
+        Mockito.when(userAuthRepository.findByUserId(defaultUser.getId()))
+                .thenReturn(Optional.of(userAuth));
+        Mockito.when(twoFactorAuthenticationProvider.validateCode("TEMP_SECRET", "123456"))
+                .thenReturn(true);
+        Mockito.when(userMapper.toUserDTO(defaultUser)).thenReturn(defaultUserDTO);
+
+        ConfirmTwoFactorAuthenticationRequestDTO request =
+                new ConfirmTwoFactorAuthenticationRequestDTO("123456");
+
+        ResponseEntity<UserDTO> response =
+                authenticationService.confirmTwoFactorAuthentication(request);
+
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertEquals(defaultUserDTO, response.getBody());
+        Assertions.assertNull(userAuth.getTemporarySecret());
+        Assertions.assertNull(userAuth.getTemporarySecretExpiration());
+        Assertions.assertEquals("TEMP_SECRET", userAuth.getSecret());
+
+        Mockito.verify(userAuthRepository).save(userAuth);
+    }
+
+    @Test
+    @DisplayName("Deve realizar login 2FA com sucesso")
+    void shouldLoginWithTwoFactorSuccessfully() {
+        TwoFactorAuthenticationToken twoFactorToken = new TwoFactorAuthenticationToken(defaultUser);
+        SecurityContextHolder.getContext().setAuthentication(twoFactorToken);
+
+        UserAuthentication userAuth = new UserAuthentication();
+        userAuth.setUser(defaultUser);
+        userAuth.setSecret("PERMANENT_SECRET");
+
+        Mockito.when(userAuthRepository.findByUserId(defaultUser.getId())).thenReturn(Optional.of(userAuth));
+        Mockito.when(twoFactorAuthenticationProvider.validateCode("PERMANENT_SECRET", "123456")).thenReturn(true);
+        Mockito.when(authProvider.generateToken(defaultUser)).thenReturn("JWT_TOKEN");
+        Mockito.when(userMapper.toUserDTO(defaultUser)).thenReturn(defaultUserDTO);
+
+        ConfirmTwoFactorAuthenticationRequestDTO request =
+                new ConfirmTwoFactorAuthenticationRequestDTO("123456");
+
+        ResponseEntity<LoginResponseDTO> response =
+                authenticationService.twoFactorAuthenticationLogin(request);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertEquals("JWT_TOKEN", response.getBody().token());
+        Assertions.assertFalse(response.getBody().twoFactorRequired());
+
+        Mockito.verify(authProvider).generateToken(defaultUser);
+    }
+
+    @Test
+    @DisplayName("Deve lançar erro se não for TwoFactorAuthenticationToken")
+    void shouldThrowIfInvalidAuthenticationState() {
+
+        Authentication normalAuth = Mockito.mock(Authentication.class);
+        SecurityContextHolder.getContext().setAuthentication(normalAuth);
+
+        ConfirmTwoFactorAuthenticationRequestDTO request =
+                new ConfirmTwoFactorAuthenticationRequestDTO("123456");
+
+        Assertions.assertThrows(AuthException.class, () ->
+                authenticationService.twoFactorAuthenticationLogin(request)
+        );
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando as credenciais forem inválidas")
+    void shouldThrowExceptionWhenCredentialsAreInvalid() {
+        AuthenticationDTO invalidAuthData = new AuthenticationDTO("admin@example.com", "senha-errada");
+
+        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
+                .thenThrow(new AuthException("Bad credentials", HttpStatus.UNAUTHORIZED) {
+                });
+
+        Assertions.assertThrows(AuthException.class,
+                () -> authenticationService.login(invalidAuthData));
+
+        Mockito.verify(authProvider, Mockito.never()).generateToken(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Deve processar a solicitação de recuperação de senha com sucesso")
+    void shouldRequestRecoverySuccessfully() throws MessagingException {
+        String fakeTemplate = "<html>Template de Email Mockado</html>";
+        String fakeEncodedToken = "ENCODED_HASH_123";
+
+        Mockito.when(userRepository.findByEmail(defaultRecoveryRequest.email())).thenReturn(Optional.of(defaultUser));
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn(fakeEncodedToken);
+        Mockito.when(emailProvider.buildRecoveryPasswordTemplate(
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString(),
+                Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()
+        )).thenReturn(fakeTemplate);
+
+        ResponseEntity<RecoveryResponseDTO> response = authenticationService.requestRecovery(defaultRecoveryRequest, defaultUserAgent);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertNotNull(response.getBody());
+        Assertions.assertTrue(response.getBody().message().contains("A password recovery email has been sent to " + defaultRecoveryRequest.email()));
+
+        Mockito.verify(userRepository).findByEmail(defaultRecoveryRequest.email());
+        Mockito.verify(passwordEncoder).encode(Mockito.anyString());
+        Mockito.verify(emailProvider).sendEmail(defaultRecoveryRequest.email(), "Redefinição de senha", fakeTemplate);
+
+        ArgumentCaptor<RecoveryRequestObserver> eventCaptor = ArgumentCaptor.forClass(RecoveryRequestObserver.class);
+        Mockito.verify(publisher).publishEvent(eventCaptor.capture());
+
+        RecoveryRequestObserver capturedEvent = eventCaptor.getValue();
+        Assertions.assertEquals(defaultUser, capturedEvent.user());
+        Assertions.assertEquals(fakeEncodedToken, capturedEvent.encodedToken());
+    }
+
+    @Test
+    @DisplayName("Deve lançar UserException ao tentar recuperar senha de um e-mail não cadastrado")
+    void shouldThrowUserExceptionWhenEmailNotFound() throws MessagingException {
+        Mockito.when(userRepository.findByEmail(defaultRecoveryRequest.email())).thenReturn(Optional.empty());
+
+        UserException exception = Assertions.assertThrows(UserException.class,
+                () -> authenticationService.requestRecovery(defaultRecoveryRequest, defaultUserAgent));
+
+        Assertions.assertEquals(HttpStatus.NOT_FOUND, exception.getHttpStatus());
+        Mockito.verify(passwordEncoder, Mockito.never()).encode(Mockito.anyString());
+        Mockito.verify(emailProvider, Mockito.never()).sendEmail(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Não deve publicar o evento de recuperação se o envio do e-mail falhar")
+    void shouldNotPublishEventIfEmailSendingFails() throws MessagingException {
+        Mockito.when(userRepository.findByEmail(defaultRecoveryRequest.email())).thenReturn(Optional.of(defaultUser));
+        Mockito.when(passwordEncoder.encode(Mockito.anyString())).thenReturn("HASH");
+        Mockito.when(emailProvider.buildRecoveryPasswordTemplate(
+                Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
+                Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any()
+        )).thenReturn("<html>Template</html>");
+
+        Mockito.doThrow(new MessagingException("Timeout do SMTP")).when(emailProvider)
+                .sendEmail(Mockito.eq(defaultRecoveryRequest.email()), Mockito.anyString(), Mockito.anyString());
+
+        Assertions.assertThrows(MessagingException.class,
+                () -> authenticationService.requestRecovery(defaultRecoveryRequest, defaultUserAgent));
+
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Deve verificar e-mail com sucesso e publicar evento")
+    void shouldVerifyEmailSuccessfully() {
+        String token = "valid-token";
+        VerifyEmailRequestDTO request = new VerifyEmailRequestDTO("newPassword123");
+
+        defaultUser.setVerifyEmailToken(token);
+        defaultUser.setVerifyEmailTokenExpiresAt(LocalDateTime.now().plusHours(1));
+
+        Mockito.when(userRepository.findByVerifyEmailToken(token))
+                .thenReturn(Optional.of(defaultUser));
+
+        Mockito.when(passwordEncoder.encode("newPassword123"))
+                .thenReturn("ENCODED_PASSWORD");
+
+        ResponseEntity<VerifyEmailResponseDTO> response =
+                authenticationService.verifyEmail(request, token);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+        Assertions.assertEquals("Email verified successfully", response.getBody().message());
+
+        ArgumentCaptor<VerifyEmailObserver> eventCaptor =
+                ArgumentCaptor.forClass(VerifyEmailObserver.class);
+
+        Mockito.verify(publisher).publishEvent(eventCaptor.capture());
+
+        VerifyEmailObserver capturedEvent = eventCaptor.getValue();
+
+        Assertions.assertEquals(defaultUser, capturedEvent.user());
+        Assertions.assertEquals("ENCODED_PASSWORD", capturedEvent.newPassword());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando token for inválido")
+    void shouldThrowWhenTokenIsInvalid() {
+
+        String token = "invalid-token";
+        VerifyEmailRequestDTO request = new VerifyEmailRequestDTO("123");
+
+        Mockito.when(userRepository.findByVerifyEmailToken(token))
+                .thenReturn(Optional.empty());
+
+        UserException exception = Assertions.assertThrows(
+                UserException.class,
+                () -> authenticationService.verifyEmail(request, token)
+        );
+
+        Assertions.assertEquals(HttpStatus.BAD_REQUEST, exception.getHttpStatus());
+        Assertions.assertEquals("Invalid verification token", exception.getMessage());
+
+        Mockito.verify(passwordEncoder, Mockito.never()).encode(Mockito.any());
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Deve lançar exceção quando token estiver expirado")
+    void shouldThrowWhenTokenIsExpired() {
+
+        String token = "expired-token";
+        VerifyEmailRequestDTO request = new VerifyEmailRequestDTO("123");
+
+        defaultUser.setVerifyEmailToken(token);
+        defaultUser.setVerifyEmailTokenExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        Mockito.when(userRepository.findByVerifyEmailToken(token))
+                .thenReturn(Optional.of(defaultUser));
+
+        UserException exception = Assertions.assertThrows(
+                UserException.class,
+                () -> authenticationService.verifyEmail(request, token)
+        );
+
+        Assertions.assertEquals(HttpStatus.BAD_REQUEST, exception.getHttpStatus());
+        Assertions.assertEquals("Verification token has expired", exception.getMessage());
+
+        Mockito.verify(passwordEncoder, Mockito.never()).encode(Mockito.any());
+        Mockito.verify(publisher, Mockito.never()).publishEvent(Mockito.any());
+    }
+}

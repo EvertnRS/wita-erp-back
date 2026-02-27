@@ -1,0 +1,54 @@
+package org.wita.erp.domain.entities.stock;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.envers.Audited;
+import org.wita.erp.domain.entities.product.Product;
+import org.wita.erp.domain.entities.transaction.Transaction;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "stock_movement")
+@Getter
+@Setter
+@Audited
+@NoArgsConstructor
+@AllArgsConstructor
+public class StockMovement {
+    @GeneratedValue(strategy = GenerationType.AUTO) @Id
+    private UUID id;
+
+    @ManyToOne
+    @JoinColumn(name = "product_id")
+    private Product product;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "movement_type", nullable = false)
+    private StockMovementType stockMovementType;
+
+    @Min(0)
+    @Column(nullable = false)
+    private Integer quantity;
+
+    @OneToOne
+    @JoinColumn(name = "movement_reason_id", nullable = false)
+    private MovementReason movementReason;
+
+    @ManyToOne
+    @JoinColumn(name = "transaction_id")
+    private Transaction transaction;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private Boolean active = true;
+}

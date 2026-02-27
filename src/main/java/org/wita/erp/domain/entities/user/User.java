@@ -1,0 +1,104 @@
+package org.wita.erp.domain.entities.user;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.envers.Audited;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.wita.erp.domain.entities.user.role.Role;
+
+import java.time.LocalDateTime;
+import java.util.*;
+
+@Entity
+@Table(name = "users")
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@Audited
+public class User implements UserDetails {
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Id
+    private UUID id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column
+    private String password;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private Boolean active = false;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
+
+    @Column(name="reset_token")
+    private String resetToken;
+
+    @CreationTimestamp
+    @Column(name="reset_token_expires_at")
+    private LocalDateTime resetTokenExpiresAt;
+
+    @Column(name="verify_email_token")
+    private String verifyEmailToken;
+
+    @CreationTimestamp
+    @Column(name="verify_email_token_expires_at")
+    private LocalDateTime verifyEmailTokenExpiresAt;
+
+    public User(String name, String password, String email, Role role) {
+        this.name = name;
+        this.password = password;
+        this.email = email;
+        this.role = role;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (this.role == null) return List.of();
+
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role.getRole()));
+
+        this.role.getPermissions().forEach(permission -> authorities.add(new SimpleGrantedAuthority(permission.getName())));
+
+        return authorities;
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
+}
