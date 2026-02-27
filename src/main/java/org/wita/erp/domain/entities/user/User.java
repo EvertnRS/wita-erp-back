@@ -30,14 +30,14 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
-    private Boolean active = true;
+    private Boolean active = false;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
@@ -49,6 +49,13 @@ public class User implements UserDetails {
     @CreationTimestamp
     @Column(name="reset_token_expires_at")
     private LocalDateTime resetTokenExpiresAt;
+
+    @Column(name="verify_email_token")
+    private String verifyEmailToken;
+
+    @CreationTimestamp
+    @Column(name="verify_email_token_expires_at")
+    private LocalDateTime verifyEmailTokenExpiresAt;
 
     public User(String name, String password, String email, Role role) {
         this.name = name;

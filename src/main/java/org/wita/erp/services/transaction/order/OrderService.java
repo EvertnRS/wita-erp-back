@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.wita.erp.domain.entities.audit.EntityType;
-import org.wita.erp.domain.entities.payment.customer.CustomerPaymentType;
+import org.wita.erp.domain.entities.paymentType.customer.CustomerPaymentType;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;
 import org.wita.erp.domain.entities.transaction.PaymentStatus;
@@ -23,20 +23,20 @@ import org.wita.erp.domain.entities.transaction.order.OrderItem;
 import org.wita.erp.domain.entities.transaction.order.dtos.*;
 import org.wita.erp.domain.entities.transaction.order.mappers.OrderMapper;
 import org.wita.erp.domain.entities.user.User;
-import org.wita.erp.domain.repositories.payment.customer.CustomerPaymentTypeRepository;
+import org.wita.erp.domain.repositories.paymentType.customer.CustomerPaymentTypeRepository;
 import org.wita.erp.domain.repositories.product.ProductRepository;
 import org.wita.erp.domain.repositories.stock.MovementReasonRepository;
 import org.wita.erp.domain.repositories.transaction.order.OrderRepository;
 import org.wita.erp.domain.repositories.transaction.order.ReceivableRepository;
 import org.wita.erp.domain.repositories.user.UserRepository;
 import org.wita.erp.infra.exceptions.order.OrderException;
-import org.wita.erp.infra.exceptions.payment.PaymentTypeException;
+import org.wita.erp.infra.exceptions.paymentType.PaymentTypeException;
 import org.wita.erp.infra.exceptions.product.ProductException;
 import org.wita.erp.infra.exceptions.purchase.PurchaseException;
 import org.wita.erp.infra.exceptions.stock.MovementReasonException;
 import org.wita.erp.infra.exceptions.user.UserException;
 import org.wita.erp.services.audit.observer.SoftDeleteLogObserver;
-import org.wita.erp.services.payment.customer.observers.CustomerPaymentTypeSoftDeleteObserver;
+import org.wita.erp.services.paymentType.customer.observers.CustomerPaymentTypeSoftDeleteObserver;
 import org.wita.erp.services.stock.observers.StockCompensationOrderObserver;
 import org.wita.erp.services.transaction.observers.TransactionSoftDeleteObserver;
 import org.wita.erp.services.transaction.order.observers.*;
@@ -127,15 +127,9 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        if(data.installments() != null){
-            publisher.publishEvent(
-                    new CreateReceivableOrderObserver(order.getId())
-            );
-        }
+        publisher.publishEvent(new CreateReceivableOrderObserver(order.getId()));
 
-        publisher.publishEvent(
-                new CreateOrderObserver(order.getId(), movementReason.getId())
-        );
+        publisher.publishEvent(new CreateOrderObserver(order.getId(), movementReason.getId()));
 
         Order saved = orderRepository
                 .findByIdWithItems(order.getId())
@@ -150,6 +144,12 @@ public class OrderService {
     public ResponseEntity<OrderDTO> update(UUID id, UpdateOrderRequestDTO data) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new OrderException("Order not found", HttpStatus.NOT_FOUND));
+
+        if((!order.getPaymentStatus().allowsManualUpdate() ||
+                receivableRepository.findDistinctStatusesByOrderId(order.getId()).size() > 1) &&
+                data.paymentStatus() != PaymentStatus.REFUNDED){
+            throw new OrderException("This order has already been finalized", HttpStatus.BAD_REQUEST);
+        }
 
         if (data.seller() != null) {
             order.setSeller(userRepository.findById(data.seller())
@@ -373,11 +373,7 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    private void handlePaymentStatusUpdate(UpdateOrderRequestDTO data, Order order) {
-        if(!order.getPaymentStatus().allowsManualUpdate()){
-            throw new OrderException("This Payment status cannot be updated manually", HttpStatus.BAD_REQUEST);
-        }
-
+    private void handlePaymentStatusUpdate(UpdateOrderRequestDTO data, Order order){
         if (order.getPaymentStatus().isReversal() && data.paymentStatus().isReversal()){
             throw new OrderException("Order is already in reversal status", HttpStatus.BAD_REQUEST);
         }
@@ -388,7 +384,7 @@ public class OrderService {
             throw new OrderException("Cannot set manually order to this payment status", HttpStatus.BAD_REQUEST);
         }
 
-        validatePaymentStatusInstallmentsOrder(order, data.paymentStatus());
+        validateReceivablePaymentStatus(order, data.paymentStatus());
         validatePaymentStatusReversalOrder(order, data.paymentStatus(), data);
 
         if (data.paymentStatus() == PaymentStatus.PAID) {
@@ -398,16 +394,13 @@ public class OrderService {
         order.setPaymentStatus(data.paymentStatus());
     }
 
-    private void validatePaymentStatusInstallmentsOrder(Order order, PaymentStatus newStatus){
-        if (order.getInstallments() != null) {
+    private void validateReceivablePaymentStatus(Order order, PaymentStatus newStatus){
             this.validatePaymentStatusTransition(order, newStatus);
             publisher.publishEvent(new OrderStatusChangedObserver(order.getId(), newStatus));
-        }
     }
 
     private void validatePaymentStatusReversalOrder(Order order, PaymentStatus newStatus, UpdateOrderRequestDTO data){
         if(newStatus.isReversal()){
-
             if (data.movementReason() == null) {
                 throw new OrderException("Movement reason is required when changing to this payment status",
                         HttpStatus.BAD_REQUEST);
@@ -438,11 +431,9 @@ public class OrderService {
                 receivableRepository.findDistinctStatusesByOrderId(order.getId());
 
         switch (newStatus) {
-
             case PAID ->
                     throw new OrderException("Cannot set manually order with installments to this payment status",
                             HttpStatus.BAD_REQUEST);
-
 
             case CANCELED -> {
                 if (statuses.contains(PaymentStatus.PAID)

@@ -15,5 +15,6 @@ public record UserDTO(
         @Schema(description = "User's role", example = "ADMIN")
         Role role,
         @Schema(description = "Indicates if the user is active", example = "true")
-        Boolean active) {
+        Boolean active
+        ) {
 }

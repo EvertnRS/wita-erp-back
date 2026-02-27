@@ -8,9 +8,9 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
 import org.wita.erp.controllers.transaction.order.docs.ReceivableDocs;
-import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
+import org.wita.erp.domain.entities.transaction.dtos.ReceivableDTO;
+import org.wita.erp.domain.entities.transaction.order.dtos.DeleteReceivableRequestDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 import org.wita.erp.services.transaction.order.ReceivableService;
 

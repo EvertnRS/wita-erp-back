@@ -10,13 +10,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.wita.erp.controllers.audit.docs.SoftDeleteLogDocs;
 import org.wita.erp.domain.entities.audit.SoftDeleteLog;
 import org.wita.erp.services.audit.SoftDeleteLogService;
 
 @RestController
 @RequestMapping("/audit")
 @RequiredArgsConstructor
-public class SoftDeleteLogController {
+public class SoftDeleteLogController implements SoftDeleteLogDocs {
     private final SoftDeleteLogService softDeleteLogService;
 
     @GetMapping("/delete")

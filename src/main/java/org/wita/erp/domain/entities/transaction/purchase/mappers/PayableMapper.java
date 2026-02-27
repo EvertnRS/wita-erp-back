@@ -1,8 +1,8 @@
 package org.wita.erp.domain.entities.transaction.purchase.mappers;
 
 import org.mapstruct.*;
+import org.wita.erp.domain.entities.transaction.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.Payable;
-import org.wita.erp.domain.entities.transaction.purchase.dtos.PayableDTO;
 import org.wita.erp.domain.entities.transaction.purchase.dtos.UpdatePayableRequestDTO;
 
 @Mapper(componentModel = "spring")

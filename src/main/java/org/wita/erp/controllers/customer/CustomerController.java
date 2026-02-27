@@ -9,13 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.wita.erp.controllers.customer.docs.CustomerDocs;
-import org.wita.erp.domain.entities.customer.Customer;
 import org.wita.erp.domain.entities.customer.dtos.CreateCustomerRequestDTO;
-import org.wita.erp.domain.entities.customer.dtos.DeleteCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.CustomerDTO;
+import org.wita.erp.domain.entities.customer.dtos.DeleteCustomerRequestDTO;
 import org.wita.erp.domain.entities.customer.dtos.UpdateCustomerRequestDTO;
 import org.wita.erp.services.customer.CustomerService;
-
 
 import java.util.UUID;
 

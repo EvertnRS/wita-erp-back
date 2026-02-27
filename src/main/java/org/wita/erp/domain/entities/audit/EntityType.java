@@ -2,7 +2,7 @@ package org.wita.erp.domain.entities.audit;
 
 import lombok.Getter;
 import org.wita.erp.domain.entities.customer.Customer;
-import org.wita.erp.domain.entities.payment.PaymentType;
+import org.wita.erp.domain.entities.paymentType.PaymentType;
 import org.wita.erp.domain.entities.product.Category;
 import org.wita.erp.domain.entities.product.Product;
 import org.wita.erp.domain.entities.stock.MovementReason;

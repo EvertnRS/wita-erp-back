@@ -1,9 +1,9 @@
 package org.wita.erp.domain.entities.transaction.order.mappers;
 
 import org.mapstruct.*;
-import org.wita.erp.domain.entities.payment.customer.mappers.CustomerPaymentTypeMapper;
+import org.wita.erp.domain.entities.paymentType.customer.mappers.CustomerPaymentTypeMapper;
+import org.wita.erp.domain.entities.transaction.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.Receivable;
-import org.wita.erp.domain.entities.transaction.order.dtos.ReceivableDTO;
 import org.wita.erp.domain.entities.transaction.order.dtos.UpdateReceivableRequestDTO;
 
 @Mapper(componentModel = "spring",  uses = {

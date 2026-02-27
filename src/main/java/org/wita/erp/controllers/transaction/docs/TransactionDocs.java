@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.wita.erp.domain.entities.transaction.Transaction;
 import org.wita.erp.domain.entities.transaction.TransactionType;
+import org.wita.erp.domain.entities.transaction.dtos.AccountsDTO;
 import org.wita.erp.domain.entities.transaction.dtos.DeleteTransactionRequestDTO;
 import org.wita.erp.domain.entities.transaction.dtos.TransactionDTO;
 
@@ -30,6 +31,14 @@ public interface TransactionDocs {
                                                                   Pageable pageable,
                                                             @Parameter(description = "Type of transaction to list", example = "ORDER")
                                                             TransactionType transactionType);
+
+    @Operation(summary = "List Paged accounts", description = "Return a accounts list with pagination support. \nRequires RECEIVABLE_READ and PAYABLE_READ authority.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Accounts retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied - user does not have RECEIVABLE_READ and PAYABLE_READ authority", content = @Content)
+    })
+    ResponseEntity<Page<AccountsDTO>> getAllAccounts(@ParameterObject
+                                           Pageable pageable);
 
     @Operation(summary = "Remove transactions", description = "Inactivate a specific transaction from the system. \nRequires ORDER_DELETE and PURCHASE_DELETE authority.")
     @ApiResponses(value = {
