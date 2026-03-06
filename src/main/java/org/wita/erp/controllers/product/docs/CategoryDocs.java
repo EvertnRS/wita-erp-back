@@ -26,7 +26,9 @@ public interface CategoryDocs {
     ResponseEntity<Page<CategoryDTO>> getAllCategories(@ParameterObject
                                               Pageable pageable,
                                                        @Parameter(description = "Term used to filter categories by name", example = "Wireless Mouse")
-                                              String searchTerm);
+                                              String searchTerm,
+                                                       @Parameter(description = "Term used to filter active categories", example = "true")
+                                               Boolean active);
 
     @Operation(summary = "Create a category", description = "Create a new category with a name. Requires CATEGORY_CREATE authority.")
     @ApiResponses(value = {

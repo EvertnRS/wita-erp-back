@@ -1,5 +1,6 @@
 package org.wita.erp.domain.repositories.user;
 
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,10 +17,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
 
     @Query("SELECT u FROM User u WHERE " +
-            "(LOWER(u.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
-            "LOWER(CAST(u.id AS STRING)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-    Page<User> findBySearchTerm(String searchTerm, Pageable pageable);
+            "(:searchTerm IS NULL OR :searchTerm = '' OR " +
+            "  (LOWER(u.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "   LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "   LOWER(CAST(u.id AS STRING)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
+            ") " +
+            "AND (:active IS NULL OR u.active = :active)")
+    Page<User> findUsers(Pageable pageable, @Param("searchTerm") String searchTerm, @Param("active") Boolean active);
 
     /**
      * Carrega o usuário com as permissions para fazer a verificação de permissões no Spring Security

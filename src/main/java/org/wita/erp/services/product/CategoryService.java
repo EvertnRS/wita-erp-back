@@ -31,14 +31,10 @@ public class CategoryService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<CategoryDTO>> getAllCategories(Pageable pageable, String searchTerm) {
-        Page<Category> categoryPage;
+    public ResponseEntity<Page<CategoryDTO>> getAllCategories(Pageable pageable, String searchTerm, Boolean active) {
+        String term = (searchTerm != null && !searchTerm.isBlank()) ? searchTerm : null;
 
-        if (searchTerm != null && !searchTerm.isBlank()) {
-            categoryPage = categoryRepository.findBySearchTerm(searchTerm, pageable);
-        } else {
-            categoryPage = categoryRepository.findAll(pageable);
-        }
+        Page<Category> categoryPage = categoryRepository.findCategories(pageable, term, active);
 
         return ResponseEntity.ok(categoryPage.map(categoryMapper::toDTO));
     }

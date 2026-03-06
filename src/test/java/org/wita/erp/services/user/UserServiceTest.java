@@ -52,7 +52,8 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
-
+    private Pageable pageable;
+    private Page<User> fakePage;
     private UUID userId;
     private Role fakeRole;
     private User fakeUser;
@@ -62,48 +63,76 @@ class UserServiceTest {
     void setUp() {
         userId = UUID.randomUUID();
         fakeRole = new Role(2L, "USER", true, null);
+        pageable = PageRequest.of(0, 10);
 
         fakeUser = new User("John", "pass", "john@example.com", fakeRole);
         fakeUser.setId(userId);
         fakeUser.setActive(true);
 
+        fakePage = new PageImpl<>(List.of(fakeUser));
         baseUserDTO = new UserDTO(userId, "John", "john@example.com", fakeRole, true);
     }
 
     @Test
-    @DisplayName("Deve retornar todos os usuários quando o searchTerm for nulo")
-    void shouldReturnAllUsersWhenSearchTermIsNull() {
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<User> fakePage = new PageImpl<>(List.of(fakeUser));
+    @DisplayName("Deve retornar todos usuários")
+    void shouldReturnAllUsers_WhenNoFiltersProvided() {
+        Mockito.when(userRepository.findUsers(pageable, null, null))
+                .thenReturn(fakePage);
 
-        Mockito.when(userRepository.findAll(pageable)).thenReturn(fakePage);
         Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
 
-        ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, null);
+        ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, null, null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         Assertions.assertNotNull(response.getBody());
         Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(userRepository).findAll(pageable);
-        Mockito.verify(userRepository, Mockito.never()).findBySearchTerm(Mockito.any(), Mockito.any());
+
+        Mockito.verify(userRepository).findUsers(pageable, null, null);
     }
 
     @Test
-    @DisplayName("Deve retornar usuários filtrados pelo searchTerm")
-    void shouldReturnUsersFilteredBySearchTerm() {
-        Pageable pageable = PageRequest.of(0, 10);
-        Page<User> fakePage = new PageImpl<>(List.of(fakeUser));
+    @DisplayName("Deve retornar usuários filtrados apenas pelo searchTerm")
+    void shouldReturnUsers_WhenFilteredBySearchTerm() {
+        Mockito.when(userRepository.findUsers(pageable, "john", null))
+                .thenReturn(fakePage);
 
-        Mockito.when(userRepository.findBySearchTerm("john", pageable)).thenReturn(fakePage);
         Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
 
-        ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, "john");
+        ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, "john", null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(userRepository).findBySearchTerm("john", pageable);
-        Mockito.verify(userRepository, Mockito.never()).findAll(Mockito.any(Pageable.class));
+
+        Mockito.verify(userRepository).findUsers(pageable, "john", null);
+    }
+
+    @Test
+    @DisplayName("Deve retornar usuários filtrados apenas por status Ativo")
+    void shouldReturnUsers_WhenFilteredByActiveStatus() {
+        Mockito.when(userRepository.findUsers(pageable, null, true))
+                .thenReturn(fakePage);
+
+        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
+
+        ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, null, true);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(userRepository).findUsers(pageable, null, true);
+    }
+
+    @Test
+    @DisplayName("Deve retornar usuários filtrados por Termo e Status")
+    void shouldReturnUsers_WhenFilteredByTermAndStatus() {
+        Mockito.when(userRepository.findUsers(pageable, "john", false))
+                .thenReturn(fakePage);
+
+        Mockito.when(userMapper.toUserDTO(fakeUser)).thenReturn(baseUserDTO);
+
+        ResponseEntity<Page<UserDTO>> response = userService.getAllUsers(pageable, "john", false);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(userRepository).findUsers(pageable, "john", false);
     }
 
     @Test
@@ -154,7 +183,7 @@ class UserServiceTest {
     @Test
     @DisplayName("Deve atualizar um usuário com sucesso")
     void shouldUpdateUserSuccessfully() {
-        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null, null);
+        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null);
         UserDTO expectedUserDTO = new UserDTO(userId, "John Updated", "john.updated@example.com", fakeRole, true);
 
         Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
@@ -168,7 +197,7 @@ class UserServiceTest {
         Mockito.verify(userRepository).save(fakeUser);
     }
 
-    @Test
+    /*@Test
     @DisplayName("Deve atualizar usuário com nova senha com sucesso")
     void shouldUpdateUserWithPasswordSuccessfully() {
         UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", "newPassword", null);
@@ -185,12 +214,12 @@ class UserServiceTest {
         Assertions.assertEquals(expectedUserDTO, response.getBody());
         Mockito.verify(passwordEncoder).encode("newPassword");
         Mockito.verify(userRepository).save(fakeUser);
-    }
+    }*/
 
     @Test
     @DisplayName("Deve atualizar usuário com novo role com sucesso")
     void shouldUpdateUserWithRoleSuccessfully() {
-        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null, 3L);
+        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", 3L);
         Role newRole = new Role(3L, "ADMIN", true, null);
         UserDTO expectedUserDTO = new UserDTO(userId, "John Updated", "john.updated@example.com", newRole, true);
 
@@ -210,7 +239,7 @@ class UserServiceTest {
     @Test
     @DisplayName("Deve lançar UserException ao tentar atualizar usuário inexistente")
     void shouldThrowUserExceptionWhenUpdatingNonExistentUser() {
-        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null, null);
+        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null);
 
         Mockito.when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
@@ -223,7 +252,7 @@ class UserServiceTest {
     @Test
     @DisplayName("Deve lançar UserException ao tentar atualizar email para um já registrado")
     void shouldThrowUserExceptionWhenUpdatingWithExistingEmail() {
-        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "existing@example.com", null, null);
+        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "existing@example.com", null);
 
         User existingUser = new User("Another", "pass", "existing@example.com", fakeRole);
         existingUser.setId(UUID.randomUUID());
@@ -240,7 +269,7 @@ class UserServiceTest {
     @Test
     @DisplayName("Deve lançar UserException ao tentar atualizar com role inexistente")
     void shouldThrowUserExceptionWhenUpdatingWithNonExistentRole() {
-        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", null, 999L);
+        UpdateUserRequestDTO fakeUpdateDTO = new UpdateUserRequestDTO("John Updated", "john.updated@example.com", 999L);
 
         Mockito.when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
         Mockito.when(userRepository.findByEmail("john.updated@example.com")).thenReturn(Optional.empty());

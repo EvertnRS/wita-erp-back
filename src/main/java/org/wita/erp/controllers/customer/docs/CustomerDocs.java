@@ -29,7 +29,9 @@ public interface CustomerDocs {
     ResponseEntity<Page<CustomerDTO>> getAllCustomers(@ParameterObject
                                               Pageable pageable,
                                                       @Parameter(description = "Term used to filter customers by name", example = "John Doe")
-                                              String searchTerm);
+                                              String searchTerm,
+                                                      @Parameter(description = "Term used to filter active customers", example = "true")
+                                              Boolean active);
 
     @Operation(summary = "Create a customer", description = "Create a new customer with a name, email, address, document number and birth date. Requires CUSTOMER_CREATE authority.")
     @ApiResponses(value = {

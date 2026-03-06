@@ -34,14 +34,10 @@ public class RoleService {
     private final RoleMapper roleMapper;
     private final ApplicationEventPublisher publisher;
 
-    public ResponseEntity<Page<RoleDTO>> getAllRoles(Pageable pageable, String searchTerm) {
-        Page<Role> rolePage;
+    public ResponseEntity<Page<RoleDTO>> getAllRoles(Pageable pageable, String searchTerm, Boolean active) {
+        String term = (searchTerm != null && !searchTerm.isBlank()) ? searchTerm : null;
 
-        if (searchTerm != null && !searchTerm.isBlank()) {
-            rolePage = roleRepository.findByRole(searchTerm, pageable);
-        } else {
-            rolePage = roleRepository.findAll(pageable);
-        }
+        Page<Role> rolePage = roleRepository.findRoles(pageable, term, active);
 
         return ResponseEntity.ok(rolePage.map(roleMapper::toDTO));
     }

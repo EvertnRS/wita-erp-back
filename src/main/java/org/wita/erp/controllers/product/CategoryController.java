@@ -25,8 +25,8 @@ public class CategoryController implements CategoryDocs {
 
     @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('CATEGORY_READ')")
-    public ResponseEntity<Page<CategoryDTO>> getAllCategories(@PageableDefault(size = 10, sort = "name") Pageable pageable, @RequestParam(required = false) String searchTerm) {
-        return categoryService.getAllCategories(pageable, searchTerm);
+    public ResponseEntity<Page<CategoryDTO>> getAllCategories(@PageableDefault(size = 10, sort = "name") Pageable pageable, @RequestParam(required = false) String searchTerm,  @RequestParam(required = false) Boolean active) {
+        return categoryService.getAllCategories(pageable, searchTerm, active);
     }
 
     @PostMapping("/create")

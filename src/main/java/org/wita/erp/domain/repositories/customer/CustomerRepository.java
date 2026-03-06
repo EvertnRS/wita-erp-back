@@ -1,5 +1,6 @@
 package org.wita.erp.domain.repositories.customer;
 
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,11 +11,14 @@ import java.util.UUID;
 
 public interface CustomerRepository extends JpaRepository<Customer, UUID> {
     @Query("SELECT c FROM Customer c WHERE " +
-            "(LOWER(c.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
-            "(LOWER(c.cpf) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
-            "(LOWER(c.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) OR " +
-            "LOWER(CAST(c.id AS STRING)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
-    Page<Customer> findBySearchTerm(String searchTerm, Pageable pageable);
+            "(:searchTerm IS NULL OR :searchTerm = '' OR " +
+            "  (LOWER(c.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "   LOWER(c.cpf) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "   LOWER(c.email) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "   LOWER(CAST(c.id AS STRING)) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
+            ") " +
+            "AND (:active IS NULL OR c.active = :active)")
+    Page<Customer> findCustomers(Pageable pageable, @Param("searchTerm") String searchTerm, @Param("active") Boolean active);
 
     Customer findByEmail(String name);
 

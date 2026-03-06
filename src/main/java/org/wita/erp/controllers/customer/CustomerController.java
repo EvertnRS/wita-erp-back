@@ -25,8 +25,8 @@ public class CustomerController implements CustomerDocs {
 
     @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('CUSTOMER_READ')")
-    public ResponseEntity<Page<CustomerDTO>> getAllCustomers(@PageableDefault(size = 10, sort = "name") Pageable pageable, @RequestParam(required = false) String searchTerm) {
-        return customerService.getAllCustomers(pageable, searchTerm);
+    public ResponseEntity<Page<CustomerDTO>> getAllCustomers(@PageableDefault(size = 10, sort = "name") Pageable pageable, @RequestParam(required = false) String searchTerm, @RequestParam(required = false) Boolean active) {
+        return customerService.getAllCustomers(pageable, searchTerm, active);
     }
 
     @PostMapping("/create")

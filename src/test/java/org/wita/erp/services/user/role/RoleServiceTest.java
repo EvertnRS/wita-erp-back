@@ -57,7 +57,7 @@ class RoleServiceTest {
     private Permission perm2;
     private Role defaultRole;
     private RoleDTO defaultRoleDTO;
-    private Page<Role> defaultPage;
+    private Page<Role> fakePage;
 
     @BeforeEach
     void setUp() {
@@ -68,42 +68,72 @@ class RoleServiceTest {
         perm2 = new Permission(2L, "USER_WRITE");
 
         defaultRole = new Role(defaultRoleId, "USER", true, new HashSet<>(Set.of(perm1, perm2)));
-        defaultRoleDTO = new RoleDTO(defaultRoleId, "USER", Set.of("USER_READ", "USER_WRITE"));
+        defaultRoleDTO = new RoleDTO(defaultRoleId, "USER",true, Set.of("USER_READ", "USER_WRITE"));
 
-        defaultPage = new PageImpl<>(List.of(defaultRole));
+        fakePage = new PageImpl<>(List.of(defaultRole));
     }
 
 
     @Test
-    @DisplayName("Deve retornar todas as roles quando o searchTerm for nulo")
-    void shouldReturnAllRolesWhenSearchTermIsNull() {
-        Mockito.when(roleRepository.findAll(pageable)).thenReturn(defaultPage);
+    @DisplayName("Deve retornar todas roles")
+    void shouldReturnAllRolesWhenNoFiltersProvided() {
+        Mockito.when(roleRepository.findRoles(pageable, null, null))
+                .thenReturn(fakePage);
+
         Mockito.when(roleMapper.toDTO(defaultRole)).thenReturn(defaultRoleDTO);
 
-        ResponseEntity<Page<RoleDTO>> response = roleService.getAllRoles(pageable, null);
+        ResponseEntity<Page<RoleDTO>> response = roleService.getAllRoles(pageable, null, null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         Assertions.assertNotNull(response.getBody());
         Assertions.assertEquals(1, response.getBody().getTotalElements());
 
-        Mockito.verify(roleRepository).findAll(pageable);
-        Mockito.verify(roleRepository, Mockito.never()).findByRole(Mockito.any(), Mockito.any());
+        Mockito.verify(roleRepository).findRoles(pageable, null, null);
     }
 
     @Test
-    @DisplayName("Deve retornar roles filtradas pelo searchTerm")
-    void shouldReturnRolesFilteredBySearchTerm() {
-        Mockito.when(roleRepository.findByRole("USER", pageable)).thenReturn(defaultPage);
+    @DisplayName("Deve retornar roles filtrados apenas pelo searchTerm")
+    void shouldReturnRolesWhenFilteredBySearchTerm() {
+        Mockito.when(roleRepository.findRoles(pageable, "admin", null))
+                .thenReturn(fakePage);
+
         Mockito.when(roleMapper.toDTO(defaultRole)).thenReturn(defaultRoleDTO);
 
-        ResponseEntity<Page<RoleDTO>> response = roleService.getAllRoles(pageable, "USER");
+        ResponseEntity<Page<RoleDTO>> response = roleService.getAllRoles(pageable, "admin", null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(1, response.getBody().getTotalElements());
 
-        Mockito.verify(roleRepository).findByRole("USER", pageable);
-        Mockito.verify(roleRepository, Mockito.never()).findAll(Mockito.any(Pageable.class));
+        Mockito.verify(roleRepository).findRoles(pageable, "admin", null);
+    }
+
+    @Test
+    @DisplayName("Deve retornar roles filtrados apenas por status Ativo")
+    void shouldReturnRolesWhenFilteredByActiveStatus() {
+        Mockito.when(roleRepository.findRoles(pageable, null, true))
+                .thenReturn(fakePage);
+
+        Mockito.when(roleMapper.toDTO(defaultRole)).thenReturn(defaultRoleDTO);
+
+        ResponseEntity<Page<RoleDTO>> response = roleService.getAllRoles(pageable, null, true);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(roleRepository).findRoles(pageable, null, true);
+    }
+
+    @Test
+    @DisplayName("Deve retornar roles filtrados por Termo e Status")
+    void shouldReturnRolesWhenFilteredByTermAndStatus() {
+        Mockito.when(roleRepository.findRoles(pageable, "admin", false))
+                .thenReturn(fakePage);
+
+        Mockito.when(roleMapper.toDTO(defaultRole)).thenReturn(defaultRoleDTO);
+
+        ResponseEntity<Page<RoleDTO>> response = roleService.getAllRoles(pageable, "admin", false);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(roleRepository).findRoles(pageable, "admin", false);
     }
 
     @Test
@@ -144,7 +174,7 @@ class RoleServiceTest {
     void shouldUpdateBothNameAndPermissionsSuccessfully() {
         UpdateRoleRequestDTO fakeUpdateDTO = new UpdateRoleRequestDTO("MANAGER", Set.of(3L));
         Permission newPermission = new Permission(3L, "USER_DELETE");
-        RoleDTO updatedRoleDTO = new RoleDTO(defaultRoleId, "MANAGER", Set.of("USER_READ", "USER_WRITE", "USER_DELETE"));
+        RoleDTO updatedRoleDTO = new RoleDTO(defaultRoleId, "MANAGER",true, Set.of("USER_READ", "USER_WRITE", "USER_DELETE"));
 
         Mockito.when(roleRepository.findById(defaultRoleId)).thenReturn(Optional.of(defaultRole));
         Mockito.when(permissionRepository.findById(3L)).thenReturn(Optional.of(newPermission));
@@ -166,7 +196,7 @@ class RoleServiceTest {
     @DisplayName("Deve atualizar APENAS o nome da Role com sucesso")
     void shouldUpdateOnlyNameSuccessfully() {
         UpdateRoleRequestDTO fakeUpdateDTO = new UpdateRoleRequestDTO("NEW_NAME_ONLY", null);
-        RoleDTO updatedRoleDTO = new RoleDTO(defaultRoleId, "NEW_NAME_ONLY", Set.of("USER_READ", "USER_WRITE"));
+        RoleDTO updatedRoleDTO = new RoleDTO(defaultRoleId, "NEW_NAME_ONLY",true, Set.of("USER_READ", "USER_WRITE"));
 
         Mockito.when(roleRepository.findById(defaultRoleId)).thenReturn(Optional.of(defaultRole));
         Mockito.when(roleMapper.toDTO(defaultRole)).thenReturn(updatedRoleDTO);
@@ -188,7 +218,7 @@ class RoleServiceTest {
 
         defaultRole.getPermissions().clear();
 
-        RoleDTO updatedRoleDTO = new RoleDTO(defaultRoleId, "USER", Set.of("SYSTEM_CONFIG"));
+        RoleDTO updatedRoleDTO = new RoleDTO(defaultRoleId, "USER",true, Set.of("SYSTEM_CONFIG"));
 
         Mockito.when(roleRepository.findById(defaultRoleId)).thenReturn(Optional.of(defaultRole));
         Mockito.when(permissionRepository.findById(3L)).thenReturn(Optional.of(newPermission));
@@ -236,7 +266,7 @@ class RoleServiceTest {
     @Test
     @DisplayName("Deve inativar uma Role com sucesso")
     void shouldDeleteRoleSuccessfully() {
-        RoleDTO deletedRoleDTO = new RoleDTO(defaultRoleId, "USER",  null);
+        RoleDTO deletedRoleDTO = new RoleDTO(defaultRoleId,"USER",  false,null);
 
         Mockito.when(roleRepository.findById(defaultRoleId)).thenReturn(Optional.of(defaultRole));
         Mockito.when(roleMapper.toDTO(defaultRole)).thenReturn(deletedRoleDTO);

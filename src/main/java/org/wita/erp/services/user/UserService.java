@@ -42,14 +42,10 @@ public class UserService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<UserDTO>> getAllUsers(Pageable pageable, String searchTerm) {
-        Page<User> userPage;
+    public ResponseEntity<Page<UserDTO>> getAllUsers(Pageable pageable, String searchTerm, Boolean active) {
+        String term = (searchTerm != null && !searchTerm.isBlank()) ? searchTerm : null;
 
-        if (searchTerm != null && !searchTerm.isBlank()) {
-            userPage = userRepository.findBySearchTerm(searchTerm, pageable);
-        } else  {
-            userPage = userRepository.findAll(pageable);
-        }
+        Page<User> userPage = userRepository.findUsers(pageable, term, active);
 
         return ResponseEntity.ok(userPage.map(userMapper::toUserDTO));
     }
@@ -80,10 +76,10 @@ public class UserService {
         }
 
         userMapper.updateUserFromDTO(data, user);
-        if (data.password() != null && !data.password().isBlank()) {
+        /*if (data.password() != null && !data.password().isBlank()) {
             String encryptedPass = passwordEncoder.encode(data.password());
             user.setPassword(encryptedPass);
-        }
+        }*/
         if (data.role() != null) {
             Role role = roleRepository.findById(data.role())
                     .orElseThrow(() -> new UserException("Role not registered in the system", HttpStatus.NOT_FOUND));

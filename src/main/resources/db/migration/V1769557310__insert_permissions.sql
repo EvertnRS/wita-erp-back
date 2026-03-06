@@ -5,6 +5,9 @@ INSERT INTO permission (name, description) VALUES
 ('USER_UPDATE', 'Atualizar usuários'),
 ('USER_DELETE', 'Remover usuários'),
 
+-- Permissões
+('PERMISSION_READ', 'Visualizar Permissões'),
+
 -- Roles
 ('ROLE_READ', 'Visualizar perfis'),
 ('ROLE_CREATE', 'Criar perfis'),

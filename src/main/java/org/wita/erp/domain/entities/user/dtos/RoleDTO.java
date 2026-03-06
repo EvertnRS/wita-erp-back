@@ -10,6 +10,8 @@ public record RoleDTO(
         Long id,
         @Schema(description = "Role's name", example = "ADMIN")
         String role,
+        @Schema(description = "Indicates if the role is active", example = "true")
+        Boolean active,
         @Schema(description = "List of permissions associated with the role", example = "[\"USER_READ\", \"USER_CREATE\"]")
         Set<String> permissions
 ) {

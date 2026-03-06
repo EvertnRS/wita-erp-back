@@ -69,33 +69,65 @@ class CategoryServiceTest {
     }
 
     @Test
-    @DisplayName("Deve retornar todos os categorias quando o searchTerm for nulo")
-    void shouldReturnAllCategoriesWhenSearchTermIsNull() {
-        Mockito.when(categoryRepository.findAll(pageable)).thenReturn(fakePage);
+    @DisplayName("Deve retornar todas categorias")
+    void shouldReturnAllCategoriesWhenNoFiltersProvided() {
+        Mockito.when(categoryRepository.findCategories(pageable, null, null))
+                .thenReturn(fakePage);
+
         Mockito.when(categoryMapper.toDTO(fakeCategory)).thenReturn(fakeCategoryDTO);
 
-        ResponseEntity<Page<CategoryDTO>> response = categoryService.getAllCategories(pageable, null);
+        ResponseEntity<Page<CategoryDTO>> response = categoryService.getAllCategories(pageable, null, null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         Assertions.assertNotNull(response.getBody());
         Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(categoryRepository).findAll(pageable);
-        Mockito.verify(categoryRepository, Mockito.never()).findBySearchTerm(Mockito.any(), Mockito.any());
+
+        Mockito.verify(categoryRepository).findCategories(pageable, null, null);
     }
 
     @Test
-    @DisplayName("Deve retornar categorias filtrados pelo searchTerm")
-    void shouldReturnCategoriesFilteredBySearchTerm() {
-        Mockito.when(categoryRepository.findBySearchTerm("Category", pageable)).thenReturn(fakePage);
+    @DisplayName("Deve retornar categorias filtradas apenas pelo searchTerm")
+    void shouldReturnCategoriesWhenFilteredBySearchTerm() {
+        Mockito.when(categoryRepository.findCategories(pageable, "Category", null))
+                .thenReturn(fakePage);
+
         Mockito.when(categoryMapper.toDTO(fakeCategory)).thenReturn(fakeCategoryDTO);
 
-        ResponseEntity<Page<CategoryDTO>> response = categoryService.getAllCategories(pageable, "Category");
+        ResponseEntity<Page<CategoryDTO>> response = categoryService.getAllCategories(pageable, "Category", null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(categoryRepository).findBySearchTerm("Category", pageable);
-        Mockito.verify(categoryRepository, Mockito.never()).findAll(Mockito.any(Pageable.class));
+
+        Mockito.verify(categoryRepository).findCategories(pageable, "Category", null);
+    }
+
+    @Test
+    @DisplayName("Deve retornar categorias filtradas apenas por status Ativo")
+    void shouldReturnCategoriesWhenFilteredByActiveStatus() {
+        Mockito.when(categoryRepository.findCategories(pageable, null, true))
+                .thenReturn(fakePage);
+
+        Mockito.when(categoryMapper.toDTO(fakeCategory)).thenReturn(fakeCategoryDTO);
+
+        ResponseEntity<Page<CategoryDTO>> response = categoryService.getAllCategories(pageable, null, true);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(categoryRepository).findCategories(pageable, null, true);
+    }
+
+    @Test
+    @DisplayName("Deve retornar categorias filtradas por Termo e Status")
+    void shouldReturnCategoriesWhenFilteredByTermAndStatus() {
+        Mockito.when(categoryRepository.findCategories(pageable, "Category", false))
+                .thenReturn(fakePage);
+
+        Mockito.when(categoryMapper.toDTO(fakeCategory)).thenReturn(fakeCategoryDTO);
+
+        ResponseEntity<Page<CategoryDTO>> response = categoryService.getAllCategories(pageable, "Category", false);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(categoryRepository).findCategories(pageable, "Category", false);
     }
 
     @Test

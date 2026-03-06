@@ -75,33 +75,65 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Deve retornar todos os clientes quando o searchTerm for nulo")
-    void shouldReturnAllCustomersWhenSearchTermIsNull() {
-        Mockito.when(customerRepository.findAll(pageable)).thenReturn(fakePage);
+    @DisplayName("Deve retornar todos clientes")
+    void shouldReturnAllCustomersWhenNoFiltersProvided() {
+        Mockito.when(customerRepository.findCustomers(pageable, null, null))
+                .thenReturn(fakePage);
+
         Mockito.when(customerMapper.toDTO(fakeCustomer)).thenReturn(fakeCustomerDTO);
 
-        ResponseEntity<Page<CustomerDTO>> response = customerService.getAllCustomers(pageable, null);
+        ResponseEntity<Page<CustomerDTO>> response = customerService.getAllCustomers(pageable, null, null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
         Assertions.assertNotNull(response.getBody());
         Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(customerRepository).findAll(pageable);
-        Mockito.verify(customerRepository, Mockito.never()).findBySearchTerm(Mockito.any(), Mockito.any());
+
+        Mockito.verify(customerRepository).findCustomers(pageable, null, null);
     }
 
     @Test
-    @DisplayName("Deve retornar clientes filtrados pelo searchTerm")
-    void shouldReturnCustomersFilteredBySearchTerm() {
-        Mockito.when(customerRepository.findBySearchTerm("john", pageable)).thenReturn(fakePage);
+    @DisplayName("Deve retornar clientes filtrados apenas pelo searchTerm")
+    void shouldReturnCustomersWhenFilteredBySearchTerm() {
+        Mockito.when(customerRepository.findCustomers(pageable, "john", null))
+                .thenReturn(fakePage);
+
         Mockito.when(customerMapper.toDTO(fakeCustomer)).thenReturn(fakeCustomerDTO);
 
-        ResponseEntity<Page<CustomerDTO>> response = customerService.getAllCustomers(pageable, "john");
+        ResponseEntity<Page<CustomerDTO>> response = customerService.getAllCustomers(pageable, "john", null);
 
         Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
-        Assertions.assertNotNull(response.getBody());
-        Assertions.assertEquals(1, response.getBody().getTotalElements());
-        Mockito.verify(customerRepository).findBySearchTerm("john", pageable);
-        Mockito.verify(customerRepository, Mockito.never()).findAll(Mockito.any(Pageable.class));
+
+        Mockito.verify(customerRepository).findCustomers(pageable, "john", null);
+    }
+
+    @Test
+    @DisplayName("Deve retornar clientes filtrados apenas por status Ativo")
+    void shouldReturnCustomersWhenFilteredByActiveStatus() {
+        Mockito.when(customerRepository.findCustomers(pageable, null, true))
+                .thenReturn(fakePage);
+
+        Mockito.when(customerMapper.toDTO(fakeCustomer)).thenReturn(fakeCustomerDTO);
+
+        ResponseEntity<Page<CustomerDTO>> response = customerService.getAllCustomers(pageable, null, true);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(customerRepository).findCustomers(pageable, null, true);
+    }
+
+    @Test
+    @DisplayName("Deve retornar clientes filtrados por Termo e Status")
+    void shouldReturnCustomersWhenFilteredByTermAndStatus() {
+        Mockito.when(customerRepository.findCustomers(pageable, "john", false))
+                .thenReturn(fakePage);
+
+        Mockito.when(customerMapper.toDTO(fakeCustomer)).thenReturn(fakeCustomerDTO);
+
+        ResponseEntity<Page<CustomerDTO>> response = customerService.getAllCustomers(pageable, "john", false);
+
+        Assertions.assertEquals(HttpStatus.OK, response.getStatusCode());
+
+        Mockito.verify(customerRepository).findCustomers(pageable, "john", false);
     }
 
     @Test

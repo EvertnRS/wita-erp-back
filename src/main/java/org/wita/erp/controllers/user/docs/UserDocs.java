@@ -28,7 +28,9 @@ public interface UserDocs {
     ResponseEntity<Page<UserDTO>> getAllUsers(@ParameterObject
                                               Pageable pageable,
                                               @Parameter(description = "Term used to filter users by name or email.", example = "John Doe")
-                                              String searchTerm);
+                                              String searchTerm,
+                                              @Parameter(description = "Term used to filter only active users.", example = "true")
+                                              Boolean active);
 
     @Operation(summary = "Update user's data", description = "Update the name, email, or password of a specific user. \nRequires USER_UPDATE authority.")
     @ApiResponses(value = {

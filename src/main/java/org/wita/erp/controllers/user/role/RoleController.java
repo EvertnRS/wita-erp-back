@@ -22,8 +22,8 @@ public class RoleController implements RoleDocs {
 
     @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('ROLE_READ')")
-    public ResponseEntity<Page<RoleDTO>> getAllRoles(@PageableDefault(size = 10, sort = "role") Pageable pageable, @RequestParam(required = false) String searchTerm) {
-        return roleService.getAllRoles(pageable, searchTerm);
+    public ResponseEntity<Page<RoleDTO>> getAllRoles(@PageableDefault(size = 10, sort = "role") Pageable pageable, @RequestParam(required = false) String searchTerm, @RequestParam(required = false) Boolean active) {
+        return roleService.getAllRoles(pageable, searchTerm, active);
     }
 
     @PostMapping("/create")

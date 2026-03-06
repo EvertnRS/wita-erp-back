@@ -29,7 +29,9 @@ public interface RoleDocs {
             @ParameterObject
             Pageable pageable,
             @Parameter(description = "Term used to filter roles by name", example = "Admin")
-            String searchTerm
+            String searchTerm,
+            @Parameter(description = "Term used to filter active roles", example = "true")
+            Boolean active
     );
 
     @Operation(summary = "Create a role", description = "Create a new role with a name and a set of permissions. Requires ROLE_CREATE authority.")

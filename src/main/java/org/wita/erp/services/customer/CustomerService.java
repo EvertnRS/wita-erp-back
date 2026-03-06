@@ -32,14 +32,10 @@ public class CustomerService {
     private final ApplicationEventPublisher publisher;
 
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<CustomerDTO>> getAllCustomers(Pageable pageable, String searchTerm) {
-        Page<Customer> customerPage;
+    public ResponseEntity<Page<CustomerDTO>> getAllCustomers(Pageable pageable, String searchTerm, Boolean active) {
+        String term = (searchTerm != null && !searchTerm.isBlank()) ? searchTerm : null;
 
-        if (searchTerm != null && !searchTerm.isBlank()) {
-            customerPage = customerRepository.findBySearchTerm(searchTerm, pageable);
-        } else {
-            customerPage = customerRepository.findAll(pageable);
-        }
+        Page<Customer> customerPage = customerRepository.findCustomers(pageable, term, active);
 
         return ResponseEntity.ok(customerPage.map(customerMapper::toDTO));
     }
@@ -68,11 +64,18 @@ public class CustomerService {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new CustomerException("Customer not found", HttpStatus.NOT_FOUND));
 
-        if (data.email() != null && customerRepository.findByEmail(data.email()) != null) {
-            throw new CustomerException("Email already registered", HttpStatus.CONFLICT);
+        if (data.email() != null) {
+            Customer customerWithEmail = customerRepository.findByEmail(data.email());
+            if (customerWithEmail != null && !customerWithEmail.getId().equals(id)) {
+                throw new CustomerException("Email already registered", HttpStatus.CONFLICT);
+            }
         }
-        if (data.cpf() != null && customerRepository.findByCpf(data.cpf()) != null) {
-            throw new CustomerException("Cpf already registered", HttpStatus.CONFLICT);
+
+        if (data.cpf() != null) {
+            Customer customerWithCpf = customerRepository.findByCpf(data.cpf());
+            if (customerWithCpf != null && !customerWithCpf.getId().equals(id)) {
+                throw new CustomerException("Cpf already registered", HttpStatus.CONFLICT);
+            }
         }
 
         customerMapper.updateCustomerFromDTO(data, customer);

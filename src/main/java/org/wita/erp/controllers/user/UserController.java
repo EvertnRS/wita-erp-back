@@ -24,8 +24,8 @@ public class UserController implements UserDocs {
 
     @GetMapping(produces = "application/json")
     @PreAuthorize("hasAuthority('USER_READ')")
-    public ResponseEntity<Page<UserDTO>> getAllUsers(@PageableDefault(size = 10, sort = "name") Pageable pageable, @RequestParam(required = false) String searchTerm) {
-        return userService.getAllUsers(pageable, searchTerm);
+    public ResponseEntity<Page<UserDTO>> getAllUsers(@PageableDefault(size = 10, sort = "name") Pageable pageable, @RequestParam(required = false) String searchTerm, @RequestParam(required = false) Boolean active) {
+        return userService.getAllUsers(pageable, searchTerm, active);
     }
 
     @PutMapping("/{id}")
