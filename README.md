@@ -1,124 +1,260 @@
-# ERP Comercial
+# 🚀 Wita ERP Back-end
 
-## Sobre o Projeto
+> Um sistema de ERP robusto desenvolvido em Java com Spring Boot para gestão integrada de estoque, transações financeiras e controle de usuários.
 
-O **ERP Comercial** é um sistema de gestão empresarial desenvolvido com o objetivo de atender **pequenas e médias empresas do ramo de comércio varejista**. O sistema centraliza e automatiza processos essenciais como **controle de estoque, vendas, financeiro, compras e relatórios**, reduzindo o uso de planilhas e minimizando erros operacionais.
+## 📋 Sobre o projeto
 
-Este projeto está sendo desenvolvido como uma **iniciativa acadêmica e prática**, simulando um cenário real de mercado, onde empresas possuem dificuldades em manter controle e visibilidade do negócio devido à falta de sistemas integrados.
+O Wita ERP Back-end é o motor central de um sistema de gestão empresarial completo, projetado para otimizar processos operacionais e financeiros. O sistema centraliza o controle de inventário, fluxo de caixa (contas a pagar e receber), pedidos, compras e usuários.
 
----
+* **O que o projeto faz:** Gerencia todo o ciclo de vida de produtos, clientes, fornecedores e transações financeiras, com suporte a pagamentos via gateway.
+* **Para quem foi desenvolvido:** Empresas que necessitam de um controle centralizado, seguro e escalável de suas operações comerciais.
+* **Qual problema resolve:** Resolve a fragmentação de dados operacionais, automatizando o controle de estoque e a conciliação financeira.
+* **Principais diferenciais:** Integração com Stripe para pagamentos, autenticação com 2FA, logs de auditoria (SoftDeleteLog) e agendamento de tarefas via Redis.
 
-## Objetivo do Sistema
+### 🎯 Objetivos
 
-O principal objetivo do ERP Comercial é:
-
-- Centralizar as informações da empresa em um único sistema 
-- Automatizar processos manuais 
-- Melhorar o controle de estoque e vendas
-- Oferecer visão clara do financeiro
-- Auxiliar na tomada de decisões através de relatórios
-
----
-
-## Público-Alvo
-
-- Pequenas e médias empresas do **comércio varejista**
-- Lojas físicas
-- Lojas com vendas presenciais e por canais digitais (WhatsApp, telefone, etc.)
+* Centralizar a gestão administrativa e financeira;
+* Automatizar o controle de estoque e reposição de produtos;
+* Garantir segurança robusta com autenticação e autorização baseada em papéis (RBAC).
 
 ---
 
-## Funcionalidades Principais
+## ✨ Funcionalidades
 
-- Autenticação e controle de usuários
-- Cadastro de produtos e categorias
-- Controle de estoque (entradas e saídas)
-- Registro de vendas
-- Controle de caixa e financeiro
-- Cadastro de fornecedores e compras
-- Relatórios gerenciais
-
----
-
-## Requisitos Funcionais
-
-### Autenticação e Usuários
-- [ ] Login com usuário e senha
-- [ ] Cadastro de usuários
-- [ ] Perfis de acesso (Administrador, Gerente, Caixa, Estoquista)
-- [ ] Controle de permissões
-- [ ] Registro de ações dos usuários
-
-### Produtos
-- [ ] Cadastro de produtos
-- [ ] Controle de preços
-- [ ] Definição de estoque mínimo
-- [ ] Ativação e desativação de produtos
-
-### Estoque
-- [ ] Registro de entrada de produtos
-- [ ] Registro de saída de produtos
-- [ ] Atualização automática do estoque
-- [ ] Alerta de estoque baixo
-- [ ] Inventário de estoque
-
-### Vendas
-- [ ] Registro de vendas
-- [ ] Venda com múltiplos produtos
-- [ ] Aplicação de descontos conforme permissão
-- [ ] Registro da forma de pagamento
-- [ ] Emissão de comprovante de venda
-
-### Financeiro
-- [ ] Controle de contas a pagar
-- [ ] Controle de contas a receber
-- [ ] Fechamento de caixa diário
-- [ ] Geração de fluxo de caixa
-- [ ] Registro de despesas operacionais
-
-### Compras e Fornecedores
-- [ ] Cadastro de fornecedores
-- [ ] Registro de pedidos de compra
-- [ ] Associação da compra ao estoque
-- [ ] Sugestão de reposição de produtos
-
-### Relatórios
-- [ ] Relatório de vendas por período
-- [ ] Relatório de produtos mais vendidos
-- [ ] Relatório de estoque
-- [ ] Relatório financeiro
-- [ ] Exportação de relatórios (PDF/Excel)
+* ✅ Gestão de Usuários, Cargos (Roles) e Permissões;
+* ✅ Controle de Estoque com Histórico de Movimentações;
+* ✅ Gestão de Pedidos (Vendas) e Compras;
+* ✅ Fluxo Financeiro (Contas a Pagar e Receber);
+* ✅ Integração completa com Stripe (Checkout e Webhooks);
+* ✅ Agendamento de tarefas (Redis);
+* ✅ Relatórios Gerenciais exportáveis;
+* ✅ Auditoria de dados (Soft Delete Logging).
 
 ---
 
-## Regras de Negócio
+## 🛠️ Tecnologias utilizadas
 
-- [ ] Uma venda só pode ser finalizada se houver estoque disponível
-- [ ] Apenas usuários autorizados podem aplicar descontos acima do limite
-- [ ] O fechamento de caixa deve ser realizado diariamente
-- [ ] Produtos com estoque abaixo do mínimo devem ser sinalizados
-- [ ] Toda venda deve gerar movimentação financeira
+### Back-end
+* [Java 17/21](https://www.oracle.com/java/)
+* [Spring Boot](https://spring.io/projects/spring-boot)
+* [Spring Security](https://spring.io/projects/spring-security)
+* [Spring Data JPA](https://spring.io/projects/spring-data-jpa)
+* [Flyway](https://flywaydb.org/) (Migrations)
+
+### Banco de dados
+* [PostgreSQL](https://www.postgresql.org/)
+* [Redis](https://redis.io/) (Cache/Scheduling)
+
+### Ferramentas & DevOps
+* [Maven](https://maven.apache.org/)
+* [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
+* [SonarQube](https://www.sonarqube.org/) (Code Quality)
+* [GitHub Actions](https://github.com/features/actions) (CI/CD)
+
+---
+
+## 📦 Pré-requisitos
+
+Antes de começar, certifique-se de ter instalado:
+
+* [Git](https://git-scm.com/)
+* [Java JDK 17 ou superior](https://adoptium.net/)
+* [Maven](https://maven.apache.org/)
+* [Docker](https://www.docker.com/) e Docker Compose
+
+Verifique as versões:
+
+```bash
+git --version
+java -version
+mvn -version
+```
+
+## 🚀 Instalação
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/usuario/wita-erp-back.git
+cd wita-erp-back
+```
+
+### 2. Compile e construa o projeto
+
+Utilize o Maven para baixar as dependências e gerar o artefato da aplicação.
+
+```bash
+mvn clean install
+```
+
+### 3. Configure as variáveis de ambiente
+
+Crie o arquivo `.env` a partir do arquivo de exemplo:
+
+```bash
+cp example.env .env
+```
+
+Configure as variáveis necessárias, como:
+
+- Banco de dados
+- Credenciais do Stripe
+- Segredos do JWT
+- Configurações de Redis (quando aplicável)
+
+### 4. Execute a aplicação
+
+Inicie a infraestrutura utilizando Docker Compose:
+
+```bash
+docker compose up -d
+```
 
 ---
 
-## Requisitos Não Funcionais
+## 📖 Como usar
 
-- Interface simples e intuitiva
-- Sistema responsivo (desktop e tablet)
-- Controle de acesso por perfil
-- Senhas armazenadas de forma segura
-- Backup automático dos dados
+### API REST
+
+A API pode ser consumida através de ferramentas como:
+
+* Postman
+* Insomnia
+* Thunder Client
+* Aplicações web ou mobile
+
+Entre as operações disponíveis estão:
+
+* autenticação;
+* gerenciamento de usuários;
+* gerenciamento de fluxo financeiro;
+
+### Swagger:
+
+acesse:
+
+http://localhost:3000/api-docs
+
+Na interface do Swagger, é possível:
+
+- Visualizar todas as rotas disponíveis;
+- Consultar os parâmetros e corpos das requisições;
+- Visualizar os formatos das respostas;
+- Autenticar utilizando um JWT através do botão Authorize;
+- Executar as requisições diretamente pela interface.
+- Autenticação
+
+As rotas protegidas utilizam autenticação Bearer JWT.
+
+Após realizar o login pela rota:
+
+copie o token retornado e clique em Authorize no Swagger.
 
 ---
 
-## Tecnologias
+## 🧪 Testes
 
-- Backend: Java + Spring Boot
-- Frontend: Angular
-- Banco de Dados: PostgreSQL
-- Arquitetura: DDD + Clean Arch
+Execute os testes automatizados com Maven:
+
+```bash
+mvn test
+```
+
+Para executar também as verificações de build:
+
+```bash
+mvn verify
+```
 
 ---
+
+## 📁 Estrutura do projeto
+
+A aplicação segue uma arquitetura organizada por camadas, separando domínio, serviços, infraestrutura e controladores.
+
+```text
+wita-erp-back/
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── org/
+│       │       └── wita/
+│       │           └── erp/
+│       │               ├── controllers/   # Endpoints da API
+│       │               ├── domain/        # Entidades, DTOs e Mappers
+│       │               ├── services/      # Regras de negócio e Observers
+│       │               ├── infra/         # Providers e Exceptions
+│       │               └── ErpApplication.java
+│       └── resources/
+│           ├── db/
+│           │   └── migration/              # Scripts SQL do Flyway
+│           └── templates/                  # Templates de e-mail
+├── docker-compose.yml
+├── pom.xml
+└── README.md
+```
+
+## 📄 Licença
+
+Este projeto está licenciado sob a **MIT License**.
+
+Consulte o arquivo `LICENSE` para obter o texto completo da licença.
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas!
+
+Antes de contribuir:
+
+* siga as diretrizes descritas em `CONTRIBUTING.md`;
+* utilize **Conventional Commits**;
+* mantenha o padrão de código existente;
+* adicione testes quando necessário.
+
+### Convenção de commits
+
+Este projeto utiliza Conventional Commits.
+
+### Licença das contribuições
+
+Ao contribuir com este projeto, você concorda que suas contribuições serão disponibilizadas sob os termos da licença vigente do repositório.
+
+## ⭐ Apoie o projeto
+
+Se este projeto foi útil para você:
+
+* ⭐ Dê uma estrela no repositório.
+* 🐛 Reporte problemas.
+* 💡 Sugira melhorias.
+* 🤝 Contribua com código.
+* 📢 Compartilhe o projeto.
+
+Obrigado pelo apoio! ❤️
+
+## 📞 Suporte
+
+Encontrou algum problema?
+
+Abra uma **Issue** informando:
+
+* descrição do problema;
+* passos para reprodução;
+* comportamento esperado;
+* comportamento atual;
+* logs ou mensagens de erro;
+* sistema operacional;
+* versão do Node.js;
+* versão do projeto.
+
+## 📚 Documentação
+
+* **README:** documentação e instalação do projeto.
+* **`CONTRIBUTING.md`:** guia para contribuição.
+* **`LICENSE`:** licença do projeto.
+
+---
+
+## 👥 Equipe
 
 ## Equipe
 <a href="https://github.com/EvertnRS">
@@ -139,4 +275,3 @@ O principal objetivo do ERP Comercial é:
 </a>
 
 ---
-
