@@ -95,12 +95,34 @@ Crie o arquivo `.env` a partir do arquivo de exemplo:
 cp example.env .env
 ```
 
-Configure as variáveis necessárias, como:
+Configure o arquivo `.env`:
+```bash
+DB_USER=postgres
+DB_PASSWORD=sua-senha-secreta
+DB_URL=jdbc:postgresql://localhost:5432/wita_erp
 
-- Banco de dados
-- Credenciais do Stripe
-- Segredos do JWT
-- Configurações de Redis (quando aplicável)
+JWT_SECRET=sua-chave-jwt-super-secreta
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=sua-senha-redis
+
+MAIL_HOST=smtp.gmail.com
+MAIL_USERNAME=seu-email@gmail.com
+MAIL_PASSWORD=sua-senha-email
+MAIL_APP_PASSWORD=sua-app-password
+
+ADMIN_EMAIL=admin@wita.com
+ADMIN_PASSWORD=sua-senha-admin
+
+FRONTEND_URL=http://localhost:5173
+BACKEND_URL=http://localhost:8080
+
+
+STRIPE_SECRET_KEY=sk_test_sua_chave_secreta
+STRIPE_PUBLIC_KEY=pk_test_sua_chave_publica
+STRIPE_WEBHOOK_SECRET=whsec_seu_webhook_secret
+```
 
 ### 4. Execute a aplicação
 
